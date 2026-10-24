@@ -6,14 +6,8 @@ import { generateResponse } from './generate'
 import type { 
   LowResourceGameReaction, 
   LowResourceGameAction,
-  ColonyVibe
 } from '../interfaces/aiReactions'
-const ALLOWED_VIBES: ColonyVibe[] = [
-  'OPTIMAL',
-  'STABLE',
-  'WARNING',
-  'CRITICAL'
-];
+
 const ALLOWED_ACTIONS: LowResourceGameAction[] = [
   'BUY_AMMO',
   'BUY_SPACE_GOOP',
@@ -39,7 +33,7 @@ Analyze the colony's current resource state and the player's input.
 You MUST return ONLY a raw JSON object matching this exact TypeScript structure:
 {
   "text": "1-2 sentences of in-character advisor commentary.",
-  "vibe": "${JSON.stringify(ALLOWED_VIBES)}",
+  "vibe": "OPTIMAL" | "STABLE" | "WARNING" | "CRITICAL",
   "actionChain": [
     {
       "stepNumber": 1,

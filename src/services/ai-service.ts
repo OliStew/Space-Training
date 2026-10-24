@@ -1,4 +1,5 @@
 import type { LowResourceGameReaction } from '../interfaces/aiReactions'
+import type { Env } from '../../worker'
 
 export async function askResourceAI(
   userCommand: string,
