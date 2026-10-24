@@ -3,7 +3,6 @@ import { useYjsRoom } from 'deepspace'
 import { Button } from '@/components/ui'
 import { useTextToSpeech } from '@/lib/tts'
 import { Volume2, VolumeX, Loader2 } from 'lucide-react'
-import {generate} from '@/lib/generate'
 
 const minPrice = 1.0
 
@@ -34,16 +33,6 @@ export default function MarketPage() {
   // Text to Speech
   const { speak, stop, isPlaying, isLoading, error: ttsError } = useTextToSpeech()
   const [customText, setCustomText] = useState('')
-  // AI response fetched on mount
-/*  const [aiResponse, setAiResponse] = useState('')
-
-  useEffect(() => {
-    if (!synced) return
-    generate('Say hello.').then(setAiResponse).catch((err) => {
-      console.error('AI generate failed:', err)
-      setAiResponse(`Error: ${err.message}`)
-    })
-  }, [synced]) */
 
   // Mirror shared values into React state on every Yjs update
   // Initial values give the market a non-zero starting price
@@ -197,11 +186,6 @@ export default function MarketPage() {
           <p className="mt-2 text-xs text-destructive">{ttsError}</p>
         )}
       </div>
-{aiResponse && (
-      <p className="mt-4 text-sm text-muted-foreground">
-        AI Response: {"aiResponse"}
-      </p>
-)}
     </div>
   )
 }
