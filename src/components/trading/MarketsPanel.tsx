@@ -1,92 +1,66 @@
 import { useState } from 'react'
-import { Button, Input, useToast } from '@/components/ui'
-import { cn } from '@/lib/utils'
-import { useGame, useNow } from '@/game/GameProvider'
-import { PLAYER_TRADABLE_KEYS } from '@/game/state'
-import type { TradableKey } from '@/shared/types'
-import { fmt, LABELS, seconds } from './format'
+import { useMarkets } from '@/game'
+import type { TradableKey } from '@/game'
+import { describe, fmt, useAttempt } from './util'
 
-/** Buy from / sell to the server-managed markets at their posted prices. */
+/**
+ * Buy from / sell to the markets.
+ *
+ * Uses useMarkets():
+ *   markets            [{ name, delaySeconds, prices: { metal: { buy, sell }, ... } }]
+ *   deliveries         market trades in transit: { market, side, resource, quantity, receive, secondsLeft }
+ *   resources          which resources can be traded
+ *   secondsUntilUpdate seconds until prices next change
+ *   buy(market, resource, quantity) / sell(...)   -> Promise, throws Error if refused
+ *     (price is locked in; the paying side leaves now, the other side arrives after delaySeconds)
+ */
 export function MarketsPanel() {
-  const { net, engine } = useGame()
-  const { error, success } = useToast()
-  const now = useNow()
-  const [selected, setSelected] = useState<string | null>(null)
-  const [qty, setQty] = useState<Record<string, string>>({})
-  const [busy, setBusy] = useState(false)
-
-  const market = net.markets.find((m) => m.name === selected) ?? net.markets[0]
-  const untilUpdate = net.nextUpdateAt ? seconds(net.nextUpdateAt - (now + net.clockSkew)) : null
-
-  async function trade(side: 'buy' | 'sell', resource: TradableKey) {
-    const quantity = Number(qty[resource] ?? 1)
-    setBusy(true)
-    try {
-      const r = side === 'buy' ? await engine.buyFromMarket(market.name, resource, quantity) : await engine.sellToMarket(market.name, resource, quantity)
-      success(`${side === 'buy' ? 'Bought' : 'Sold'} ${r.quantity} ${LABELS[resource]}`, `$${fmt(r.total)}`)
-    } catch (e) {
-      error('Order failed', e instanceof Error ? e.message : String(e))
-    } finally {
-      setBusy(false)
-    }
-  }
+  const { markets, deliveries, resources, secondsUntilUpdate, error, buy, sell } = useMarkets()
+  const [message, attempt] = useAttempt()
+  const [quantity, setQuantity] = useState('1')
+  const qty = Number(quantity)
 
   return (
-    <section className="rounded-lg border border-border bg-card p-4">
-      <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="text-lg font-semibold text-foreground">Markets</h2>
-        {untilUpdate !== null && <p className="text-xs text-muted-foreground">Prices update in {untilUpdate}s</p>}
-      </div>
-
-      {net.markets.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{net.error ?? 'Loading markets…'}</p>
-      ) : (
-        <>
-          <div className="mb-4 flex flex-wrap gap-2">
-            {net.markets.map((m) => (
-              <Button key={m.name} size="sm" variant={m.name === market.name ? 'default' : 'outline'} onClick={() => setSelected(m.name)}>
-                {m.name}
-              </Button>
-            ))}
-          </div>
-          <table className="w-full text-sm">
-            <thead className="text-left text-xs text-muted-foreground">
-              <tr>
-                <th className="py-1 font-normal">Resource</th>
-                <th className="py-1 text-right font-normal">You pay</th>
-                <th className="py-1 text-right font-normal">You get</th>
-                <th className="py-1 pl-4 font-normal">Qty</th>
-                <th />
-              </tr>
+    <section>
+      <h2>Markets</h2>
+      <p>
+        Quantity: <input type="number" min="1" step="1" size={5} value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+        {secondsUntilUpdate !== null && <> | Prices update in {secondsUntilUpdate}s</>}
+      </p>
+      {markets.length === 0 && <p>{error ?? 'Loading markets...'}</p>}
+      {markets.map((market) => (
+        <div key={market.name}>
+          <h3>{market.name} ({market.delaySeconds}s away)</h3>
+          <table>
+            <thead>
+              <tr><th>Resource</th><th>You pay</th><th>You get</th><th /></tr>
             </thead>
             <tbody>
-              {PLAYER_TRADABLE_KEYS.filter((k) => market.prices[k]).map((k) => {
-                const p = market.prices[k]!
-                return (
-                  <tr key={k} className="border-t border-border">
-                    <td className="py-2">{LABELS[k]}</td>
-                    <td className={cn('py-2 text-right font-mono')}>{fmt(p.buy)}</td>
-                    <td className="py-2 text-right font-mono">{fmt(p.sell)}</td>
-                    <td className="py-2 pl-4">
-                      <Input
-                        aria-label={`${LABELS[k]} quantity`}
-                        className="h-8 w-20"
-                        inputMode="numeric"
-                        value={qty[k] ?? '1'}
-                        onChange={(e) => setQty({ ...qty, [k]: e.target.value })}
-                      />
-                    </td>
-                    <td className="space-x-2 py-2 text-right">
-                      <Button size="sm" disabled={busy} onClick={() => trade('buy', k)}>Buy</Button>
-                      <Button size="sm" variant="secondary" disabled={busy} onClick={() => trade('sell', k)}>Sell</Button>
-                    </td>
-                  </tr>
-                )
-              })}
+              {resources.filter((r) => market.prices[r]).map((r: TradableKey) => (
+                <tr key={r}>
+                  <td>{r}</td>
+                  <td>{fmt(market.prices[r].buy)}</td>
+                  <td>{fmt(market.prices[r].sell)}</td>
+                  <td>
+                    <button onClick={() => attempt(() => buy(market.name, r, qty), `Ordered ${qty} ${r} from ${market.name}; arrives in ${market.delaySeconds}s`)}>Buy</button>{' '}
+                    <button onClick={() => attempt(() => sell(market.name, r, qty), `Sold ${qty} ${r} to ${market.name}; paid in ${market.delaySeconds}s`)}>Sell</button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
-        </>
-      )}
+        </div>
+      ))}
+      {message && <p>{message}</p>}
+      <h3>In transit</h3>
+      {deliveries.length === 0 && <p>None.</p>}
+      <ul>
+        {deliveries.map((d) => (
+          <li key={d.id}>
+            {d.side === 'buy' ? 'Buying' : 'Selling'} {d.quantity} {d.resource} {d.side === 'buy' ? 'from' : 'to'} {d.market} @ {fmt(d.unitPrice)} - arrives in {d.secondsLeft}s ({describe(d.receive)})
+          </li>
+        ))}
+      </ul>
     </section>
   )
 }
