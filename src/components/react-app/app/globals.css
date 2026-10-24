@@ -1,0 +1,77 @@
+/* ── Y2K UI Tokens ── */
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-y2k-ink: var(--y2k-ink);
+  --color-y2k-blue: var(--y2k-blue);
+  --color-y2k-pink: var(--y2k-pink);
+  --color-y2k-lilac: var(--y2k-lilac);
+  --color-y2k-mint: var(--y2k-mint);
+  --color-y2k-lemon: var(--y2k-lemon);
+  --color-y2k-panel: var(--y2k-panel);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+:root {
+  --background: oklch(0.97 0.02 280);
+  --foreground: var(--y2k-ink);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--y2k-ink);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--y2k-ink);
+  --primary: var(--y2k-blue);
+  --primary-foreground: var(--y2k-ink);
+  --secondary: var(--y2k-panel);
+  --secondary-foreground: var(--y2k-ink);
+  --muted: var(--y2k-panel);
+  --muted-foreground: oklch(0.45 0.02 280);
+  --accent: var(--y2k-pink);
+  --accent-foreground: var(--y2k-ink);
+  --destructive: oklch(0.6 0.22 27);
+  --border: var(--y2k-ink);
+  --input: var(--y2k-ink);
+  --ring: var(--y2k-pink);
+  --radius: 0.5rem;
+
+  --y2k-ink: #1b1b3a;
+  --y2k-blue: #8ed1fc;
+  --y2k-pink: #ff8fcf;
+  --y2k-lilac: #b69cff;
+  --y2k-mint: #8ff0d0;
+  --y2k-lemon: #ffe45e;
+  --y2k-panel: #d7dde8;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
