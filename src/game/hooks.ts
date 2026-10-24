@@ -10,6 +10,7 @@
  *    refunds, 15s expiry, depletion) are enforced in the engine, not the UI.
  *
  *  useResources()    your money / metal / ammo / biomass / oxygen / buildings
+ *  useGameTime()     the shared game clock (seconds since the game began)
  *  useDepletion()    how fast biomass and oxygen drain, and a setter
  *  useMarkets()      market prices, travel times, in-transit deliveries + buy() / sell()
  *  usePlayerTrades() send / accept / decline / cancel trades with other players
@@ -19,7 +20,7 @@
 
 import { useCallback } from 'react'
 import { useGame, useNow } from './GameProvider'
-import { applyDelta, DEPLETING_KEYS, PLAYER_TRADABLE_KEYS, setDepletion } from './state'
+import { applyDelta, DEPLETING_KEYS, PLAYER_TRADABLE_KEYS, setDepletion, setGameTime } from './state'
 import type { DepletingKey, HistoryEntry } from './state'
 import { tradeLegs } from '../shared/trade-book'
 import type { Delta, MarketEntry, OrderReceipt, ResourceKey, TradableKey, Trade, TradeRequestInput } from '../shared/types'
@@ -30,9 +31,30 @@ export type { Delta, DepletingKey, HistoryEntry, MarketEntry, OrderReceipt, Reso
 
 // ---- Resources --------------------------------------------------------------
 
-/** `{ money, metal, ammo, biomass, oxygen, buildings }` — current amounts. */
-export function useResources(): Record<ResourceKey, number> {
-  return useGame().state.resources
+type VisibleResourceKey = Exclude<ResourceKey, 'metal' | 'buildings'>
+/** `{ money, ammo, biomass, oxygen, health }` — current amounts (excludes metal and buildings). */
+export function useResources(): Record<VisibleResourceKey, number> {
+  const resources = useGame().state.resources
+  const { buildings, metal, ...visible } = resources
+  return visible
+}
+
+// ---- Game time ------------------------------------------------------------------
+
+export interface GameTime {
+  /**
+   * The game clock in seconds, e.g. 125.4. Starts at 0, ticks about once a
+   * second, is saved with the player, and every component sees the same value.
+   * (Round it for display: `Math.floor(seconds)`.)
+   */
+  seconds: number
+  /** Jump the clock, e.g. `set(0)` to restart a scenario. */
+  set: (seconds: number) => void
+}
+
+export function useGameTime(): GameTime {
+  const { state, store } = useGame()
+  return { seconds: state.gameTime, set: (seconds) => store.update((s) => setGameTime(s, seconds)) }
 }
 
 // ---- Depletion ----------------------------------------------------------------

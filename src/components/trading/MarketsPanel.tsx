@@ -36,7 +36,7 @@ export function MarketsPanel() {
               <tr><th>Resource</th><th>You pay</th><th>You get</th><th /></tr>
             </thead>
             <tbody>
-              {resources.filter((r) => market.prices[r]).map((r: TradableKey) => (
+              {resources.filter((r) => market.prices[r] && r !== 'metal' && r !== 'buildings').map((r: TradableKey) => (
                 <tr key={r}>
                   <td>{r}</td>
                   <td>{fmt(market.prices[r].buy)}</td>

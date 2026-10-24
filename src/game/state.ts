@@ -8,7 +8,7 @@ import { RESOURCE_KEYS, TRADABLE_KEYS } from '../shared/types'
 import type { Delta, ResourceKey, TradableKey, Trade } from '../shared/types'
 
 /** Resources players may trade (markets and other players). Buildings are owned, not traded, for now. */
-export const PLAYER_TRADABLE_KEYS: TradableKey[] = TRADABLE_KEYS.filter((k) => k !== 'buildings')
+export const PLAYER_TRADABLE_KEYS: TradableKey[] = TRADABLE_KEYS.filter((k) => k !== 'buildings' && k !== 'metal')
 export const isPlayerTradable = (k: unknown): k is TradableKey => (PLAYER_TRADABLE_KEYS as readonly unknown[]).includes(k)
 
 /** Resources that drain over time. */
@@ -60,6 +60,8 @@ export interface GameState {
   resources: Record<ResourceKey, number>
   /** Units lost per second. Customizable; 0 disables depletion. */
   depletion: Record<DepletingKey, number>
+  /** Game clock: seconds the game has run for this player. Advances with depletion (including time the app was closed). */
+  gameTime: number
   /** Epoch ms the depletion was last applied up to. */
   lastTick: number
   holds: Record<string, Hold>
@@ -77,6 +79,7 @@ export const STARTING_RESOURCES: Record<ResourceKey, number> = {
   biomass: 100,
   oxygen: 100,
   buildings: 0,
+  health: 100,
 }
 
 export const DEFAULT_DEPLETION: Record<DepletingKey, number> = { biomass: 0.05, oxygen: 0.1 }
@@ -88,6 +91,7 @@ export function initialState(now: number): GameState {
     version: 1,
     resources: { ...STARTING_RESOURCES },
     depletion: { ...DEFAULT_DEPLETION },
+    gameTime: 0,
     lastTick: now,
     holds: {},
     marketDelays: {},
@@ -110,6 +114,7 @@ export function reviveState(raw: unknown, now: number): GameState {
     version: 1,
     resources,
     depletion,
+    gameTime: Math.max(0, num(r.gameTime, 0)),
     lastTick: num(r.lastTick, now),
     holds: r.holds && typeof r.holds === 'object' ? r.holds : {},
     marketDelays: r.marketDelays && typeof r.marketDelays === 'object' ? r.marketDelays : {},
@@ -148,7 +153,7 @@ export function tick(state: GameState, now: number): GameState {
     for (const k of DEPLETING_KEYS) {
       resources[k] = Math.max(0, resources[k] - state.depletion[k] * seconds)
     }
-    next = { ...state, resources, lastTick: now }
+    next = { ...state, resources, gameTime: state.gameTime + seconds, lastTick: now }
   } else if (state.lastTick > now) {
     next = { ...state, lastTick: now }
   }
@@ -232,4 +237,8 @@ export function releaseHold(state: GameState, tradeId: string): GameState {
   if (!hold) return state
   const { [tradeId]: _removed, ...holds } = state.holds
   return applyDelta({ ...state, holds }, hold.give)
+}
+
+export function setGameTime(state: GameState, seconds: number): GameState {
+  return Number.isFinite(seconds) && seconds >= 0 ? { ...state, gameTime: seconds } : state
 }

@@ -10,7 +10,6 @@ import { HistoryPanel } from '@/components/trading/HistoryPanel'
 import { MarketsPanel } from '@/components/trading/MarketsPanel'
 import { PlayerTradePanel } from '@/components/trading/PlayerTradePanel'
 
-import { ResourceBar } from '@/components/trading/ResourceBar'
 import { VoiceAssistantPanel } from '@/components/trading/VoiceAssistantPanel'
 import { ResourcesPanel } from '@/components/trading/ResourcesPanel'
 import { ScenarioPanel } from '@/components/trading/ScenarioPanel'

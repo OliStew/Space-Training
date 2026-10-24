@@ -1,4 +1,4 @@
-import { useDebugResources, useResources } from '@/game'
+import { useDebugResources, useGameTime, useResources } from '@/game'
 
 /**
  * Placeholder for the scenario UI. No logic yet — this is just screen space.
@@ -8,12 +8,14 @@ import { useDebugResources, useResources } from '@/game'
  *   resources                  read: { money, metal, ammo, biomass, oxygen, buildings }
  *   addResource(key, amount)   write: give the player `amount` of `key`
  *   removeResource(key, amount) write: take `amount` of `key` (stops at zero)
+ *   gameTime                  read: the shared game clock in seconds (also useGameTime().set(seconds) to change it)
  * (add/remove come from useDebugResources; despite the name they are the general write API.)
  */
 export function ScenarioPanel() {
   const resources = useResources()
   const { add: addResource, remove: removeResource } = useDebugResources()
-  void resources, addResource, removeResource // available to the scenario code, not used yet
+  const { seconds: gameTime } = useGameTime()
+  void resources, addResource, removeResource, gameTime // available to the scenario code, not used yet
 
     // To modify resources, use the form addResource('money', 100) and removeResource('biomass', 50)
     // To access resources, use the form resources.money, resources.metal, etc.

@@ -79,6 +79,15 @@ describe('depletion', () => {
   })
 })
 
+describe('game time', () => {
+  it('starts at 0 and advances with the clock', () => {
+    const { clock, alice } = setup()
+    expect(alice.store.get().gameTime).toBe(0)
+    alice.store.update((s) => tick(s, clock.now + 5_500))
+    expect(alice.store.get().gameTime).toBeCloseTo(5.5)
+  })
+})
+
 describe('market orders', () => {
   /** Let every in-transit trade arrive. */
   const arrive = (a: ReturnType<typeof setup>, p: { store: GameStore }) => {
