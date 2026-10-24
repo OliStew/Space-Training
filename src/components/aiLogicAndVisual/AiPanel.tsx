@@ -1,11 +1,9 @@
+
 import React, { useState } from 'react'
 import { useGameTime, useResources } from '@/game'
 import { askResourceAI } from '@/services/ai-service'
 import type { LowResourceGameReaction, LowResourceGameAction } from '@/interfaces/aiReactions'
-
-/**
- * Tactical AI Panel Component
- */
+        
 export function AIPanel() {
   const resources = useResources()
   const { seconds: gameTime } = useGameTime()
