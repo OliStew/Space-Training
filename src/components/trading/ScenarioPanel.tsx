@@ -43,7 +43,7 @@ export function ScenarioPanel() {
   })
   const [inputText, setInputText] = useState('')
   const [feedback, setFeedback] = useState<string | null>(null)
-  const [autoRead, setAutoRead] = useState(true)
+  const [autoRead, setAutoRead] = useState(false)
 
   // Track the scenario ID to avoid duplicate auto-reads on re-renders
   const lastReadIdRef = useRef<number | null>(null)
