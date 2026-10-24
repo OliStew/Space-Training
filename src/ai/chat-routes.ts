@@ -77,13 +77,14 @@ export function registerAiChatRoutes(
   const requireAccess = async (c: Context<AppContext>): Promise<AccessGrant | Response> => {
     const access = await resolveAccess(c.req.raw, c.env)
     if (access.ok) return access
+    const status = 'status' in access ? (access.status as 401 | 403 | 503) : 503
     const error =
-      access.status === 401
+      status === 401
         ? 'Unauthorized'
-        : access.status === 403
+        : status === 403
           ? 'Forbidden'
           : 'Temporarily unavailable'
-    return c.json({ error }, access.status)
+    return c.json({ error }, status)
   }
 
   // Create a new chat row owned by the caller.

@@ -4,11 +4,11 @@
  */
 
 /** Everything a player owns. `money` is the currency; the rest can be traded. */
-export const RESOURCE_KEYS = ['money', 'metal', 'ammo', 'biomass', 'oxygen', 'buildings'] as const
+export const RESOURCE_KEYS = ['money', 'metal', 'ammo', 'biomass', 'oxygen', 'buildings', 'health'] as const
 export type ResourceKey = (typeof RESOURCE_KEYS)[number]
 
 /** Resources that can be bought/sold (everything except the currency). */
-export const TRADABLE_KEYS = ['metal', 'ammo', 'biomass', 'oxygen', 'buildings'] as const
+export const TRADABLE_KEYS = ['metal', 'ammo', 'biomass', 'oxygen', 'buildings', 'health'] as const
 export type TradableKey = (typeof TRADABLE_KEYS)[number]
 
 export function isTradable(value: unknown): value is TradableKey {

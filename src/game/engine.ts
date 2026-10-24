@@ -17,8 +17,8 @@ import type { MarketEntry, MarketPrice, MarketsConfig, OrderReceipt, TradableKey
 import { ApiError } from './api'
 import type { GameApi } from './api'
 import { Observable } from './observable'
-import { addHistory, applyDelta, isPlayerTradable, placeHold, releaseHold, resolveHold, spend } from './state'
-import type { Hold } from './state'
+import { addHistory, applyDelta, assignMarketDelays, cancelDelivery, isPlayerTradable, placeDelivery, placeHold, releaseHold, resolveHold, spend } from './state'
+import type { Delivery, Hold } from './state'
 import type { GameStore } from './store'
 
 export interface NetState {
@@ -104,6 +104,7 @@ export class TradingEngine {
         clockSkew: snap.serverTime - this.now(),
         error: null,
       })
+      this.store.update((s) => assignMarketDelays(s, snap.markets.map((m) => m.name)))
     } catch (e) {
       this.patch({ error: message(e) })
     }
@@ -128,27 +129,42 @@ export class TradingEngine {
     if (!price) throw new Error(`${market} does not trade ${resource}`)
     const unit = side === 'buy' ? price.buy : price.sell
     const money = round2(unit * quantity)
-    // Reserve what's being paid up front so rapid clicks can't overspend.
+    // The paying side leaves now; the other side arrives after this market's travel time.
     const give = side === 'buy' ? { money } : { [resource]: quantity }
-    if (!this.store.tryUpdate((s) => spend(s, give))) {
+    const receive = side === 'buy' ? { [resource]: quantity } : { money }
+    const delaySeconds = this.store.get().marketDelays[market] ?? 0
+    const created = this.now()
+    const delivery: Delivery = {
+      id: this.newId(),
+      market,
+      side,
+      resource,
+      quantity,
+      unitPrice: unit,
+      total: money,
+      createdAt: created,
+      completesAt: created + delaySeconds * 1000,
+      receive,
+    }
+    // Check affordability and reserve in one step so rapid clicks can't overspend.
+    if (!this.store.tryUpdate((s) => placeDelivery(s, give, delivery))) {
       throw new Error(side === 'buy' ? `Not enough money (need ${money.toFixed(2)})` : `Not enough ${resource}`)
     }
     let receipt: OrderReceipt
     try {
       receipt = await this.api.order(side, market, resource, quantity, unit)
     } catch (e) {
-      this.store.update((s) => applyDelta(s, give))
+      this.store.update((s) => cancelDelivery(s, delivery.id, give))
       if (e instanceof ApiError && e.code === 'price_changed') {
         void this.refreshMarkets()
         throw new Error('Prices just changed — review the new price and try again')
       }
       throw e
     }
-    const gain = side === 'buy' ? { [resource]: quantity } : { money }
     this.store.update((s) =>
       addHistory(
-        applyDelta(s, gain),
-        `${side === 'buy' ? 'Bought' : 'Sold'} ${quantity} ${resource} ${side === 'buy' ? 'from' : 'to'} ${market} @ ${unit.toFixed(2)} (${money.toFixed(2)})`,
+        s,
+        `${side === 'buy' ? 'Bought' : 'Sold'} ${quantity} ${resource} ${side === 'buy' ? 'from' : 'to'} ${market} @ ${unit.toFixed(2)} (${money.toFixed(2)}); ${side === 'buy' ? 'arrives' : 'paid'} in ${delaySeconds}s`,
         this.now(),
       ),
     )

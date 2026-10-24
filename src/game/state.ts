@@ -8,7 +8,7 @@ import { RESOURCE_KEYS, TRADABLE_KEYS } from '../shared/types'
 import type { Delta, ResourceKey, TradableKey, Trade } from '../shared/types'
 
 /** Resources players may trade (markets and other players). Buildings are owned, not traded, for now. */
-export const PLAYER_TRADABLE_KEYS: TradableKey[] = TRADABLE_KEYS.filter((k) => k !== 'buildings')
+export const PLAYER_TRADABLE_KEYS: TradableKey[] = TRADABLE_KEYS.filter((k) => k !== 'buildings' && k !== 'metal')
 export const isPlayerTradable = (k: unknown): k is TradableKey => (PLAYER_TRADABLE_KEYS as readonly unknown[]).includes(k)
 
 /** Resources that drain over time. */
@@ -30,6 +30,25 @@ export interface Hold {
   summary: Pick<Trade, 'side' | 'resource' | 'quantity' | 'unitPrice' | 'total'> & { counterparty: string }
 }
 
+/** A market trade in transit: the price was locked and the paying side already deducted. */
+export interface Delivery {
+  id: string
+  market: string
+  side: 'buy' | 'sell'
+  resource: TradableKey
+  quantity: number
+  unitPrice: number
+  total: number
+  createdAt: number
+  /** Epoch ms (this device's clock) when `receive` is paid out. */
+  completesAt: number
+  /** Buy: the goods. Sell: the money. */
+  receive: Delta
+}
+
+/** Possible travel times (seconds) for markets; each player gets them shuffled across markets. */
+export const MARKET_DELAYS_SECONDS = [60, 40, 20]
+
 export interface HistoryEntry {
   id: string
   at: number
@@ -41,9 +60,15 @@ export interface GameState {
   resources: Record<ResourceKey, number>
   /** Units lost per second. Customizable; 0 disables depletion. */
   depletion: Record<DepletingKey, number>
+  /** Game clock: seconds the game has run for this player. Advances with depletion (including time the app was closed). */
+  gameTime: number
   /** Epoch ms the depletion was last applied up to. */
   lastTick: number
   holds: Record<string, Hold>
+  /** Seconds a trade with each market takes, assigned randomly per player. */
+  marketDelays: Record<string, number>
+  /** Market trades still on their way. */
+  deliveries: Record<string, Delivery>
   history: HistoryEntry[]
 }
 
@@ -54,6 +79,7 @@ export const STARTING_RESOURCES: Record<ResourceKey, number> = {
   biomass: 100,
   oxygen: 100,
   buildings: 0,
+  health: 100,
 }
 
 export const DEFAULT_DEPLETION: Record<DepletingKey, number> = { biomass: 0.05, oxygen: 0.1 }
@@ -65,8 +91,11 @@ export function initialState(now: number): GameState {
     version: 1,
     resources: { ...STARTING_RESOURCES },
     depletion: { ...DEFAULT_DEPLETION },
+    gameTime: 0,
     lastTick: now,
     holds: {},
+    marketDelays: {},
+    deliveries: {},
     history: [],
   }
 }
@@ -85,8 +114,11 @@ export function reviveState(raw: unknown, now: number): GameState {
     version: 1,
     resources,
     depletion,
+    gameTime: Math.max(0, num(r.gameTime, 0)),
     lastTick: num(r.lastTick, now),
     holds: r.holds && typeof r.holds === 'object' ? r.holds : {},
+    marketDelays: r.marketDelays && typeof r.marketDelays === 'object' ? r.marketDelays : {},
+    deliveries: r.deliveries && typeof r.deliveries === 'object' ? r.deliveries : {},
     history: Array.isArray(r.history) ? r.history.slice(-HISTORY_LIMIT) : [],
   }
 }
@@ -112,15 +144,60 @@ export function spend(state: GameState, cost: Delta): GameState | null {
   return canAfford(state, cost) ? applyDelta(state, cost, -1) : null
 }
 
-/** Drain biomass and oxygen for the time elapsed since the last tick. */
+/** Drain biomass and oxygen for the time elapsed, then pay out any market trades that have arrived. */
 export function tick(state: GameState, now: number): GameState {
+  let next = state
   const seconds = (now - state.lastTick) / 1000
-  if (seconds <= 0) return state.lastTick > now ? { ...state, lastTick: now } : state
-  const resources = { ...state.resources }
-  for (const k of DEPLETING_KEYS) {
-    resources[k] = Math.max(0, resources[k] - state.depletion[k] * seconds)
+  if (seconds > 0) {
+    const resources = { ...state.resources }
+    for (const k of DEPLETING_KEYS) {
+      resources[k] = Math.max(0, resources[k] - state.depletion[k] * seconds)
+    }
+    next = { ...state, resources, gameTime: state.gameTime + seconds, lastTick: now }
+  } else if (state.lastTick > now) {
+    next = { ...state, lastTick: now }
   }
-  return { ...state, resources, lastTick: now }
+  return completeDeliveries(next, now)
+}
+
+/** Give each market without a travel time one, drawn at random from the unused times. */
+export function assignMarketDelays(state: GameState, marketNames: string[], random: () => number = Math.random): GameState {
+  const missing = marketNames.filter((n) => state.marketDelays[n] === undefined)
+  if (missing.length === 0) return state
+  const delays = { ...state.marketDelays }
+  for (const name of missing) {
+    const unused = MARKET_DELAYS_SECONDS.filter((d) => !Object.values(delays).includes(d))
+    const pool = unused.length > 0 ? unused : MARKET_DELAYS_SECONDS
+    delays[name] = pool[Math.floor(random() * pool.length)]
+  }
+  return { ...state, marketDelays: delays }
+}
+
+/** Reserve the paying side of a market trade and record it as in transit. Null if unaffordable. */
+export function placeDelivery(state: GameState, give: Delta, delivery: Delivery): GameState | null {
+  const spent = spend(state, give)
+  return spent && { ...spent, deliveries: { ...spent.deliveries, [delivery.id]: delivery } }
+}
+
+/** Abort an in-transit trade (the server refused the order) and refund what was paid. */
+export function cancelDelivery(state: GameState, id: string, refund: Delta): GameState {
+  if (!state.deliveries[id]) return state
+  const { [id]: _gone, ...deliveries } = state.deliveries
+  return applyDelta({ ...state, deliveries }, refund)
+}
+
+/** Pay out every delivery whose time has come. Each is removed as it is paid, so it happens once. */
+export function completeDeliveries(state: GameState, now: number): GameState {
+  const due = Object.values(state.deliveries).filter((d) => d.completesAt <= now)
+  if (due.length === 0) return state
+  let next = state
+  for (const d of due) {
+    const { [d.id]: _done, ...deliveries } = next.deliveries
+    next = applyDelta({ ...next, deliveries }, d.receive)
+    const what = `${d.quantity} ${d.resource} ${d.side === 'buy' ? 'from' : 'to'} ${d.market}`
+    next = addHistory(next, d.side === 'buy' ? `Delivered: ${what}` : `Paid $${d.total.toFixed(2)} for ${what}`, now)
+  }
+  return next
 }
 
 export function setDepletion(state: GameState, key: DepletingKey, perSecond: number): GameState {
@@ -160,4 +237,8 @@ export function releaseHold(state: GameState, tradeId: string): GameState {
   if (!hold) return state
   const { [tradeId]: _removed, ...holds } = state.holds
   return applyDelta({ ...state, holds }, hold.give)
+}
+
+export function setGameTime(state: GameState, seconds: number): GameState {
+  return Number.isFinite(seconds) && seconds >= 0 ? { ...state, gameTime: seconds } : state
 }

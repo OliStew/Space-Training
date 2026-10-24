@@ -79,17 +79,71 @@ describe('depletion', () => {
   })
 })
 
+describe('game time', () => {
+  it('starts at 0 and advances with the clock', () => {
+    const { clock, alice } = setup()
+    expect(alice.store.get().gameTime).toBe(0)
+    alice.store.update((s) => tick(s, clock.now + 5_500))
+    expect(alice.store.get().gameTime).toBeCloseTo(5.5)
+  })
+})
+
 describe('market orders', () => {
-  it('apply immediately at the shown price and record volume', async () => {
-    const { server, alice } = setup()
-    await alice.engine.refreshMarkets()
-    await alice.engine.buyFromMarket('M', 'metal', 10)
-    expect(res(alice).money).toBeCloseTo(1000 - 110)
-    expect(res(alice).metal).toBe(110)
-    await alice.engine.sellToMarket('M', 'metal', 20)
-    expect(res(alice).money).toBeCloseTo(1000 - 110 + 180)
-    expect(res(alice).metal).toBe(90)
-    expect(server.volumes).toEqual([{ side: 'buy', qty: 10 }, { side: 'sell', qty: 20 }])
+  /** Let every in-transit trade arrive. */
+  const arrive = (a: ReturnType<typeof setup>, p: { store: GameStore }) => {
+    a.clock.now += 61_000
+    p.store.update((s) => tick(s, a.clock.now))
+  }
+
+  it('assigns one market each of 60s / 40s / 20s per player, and keeps it', async () => {
+    for (let i = 0; i < 20; i++) {
+      const a = setup()
+      a.server.markets.push({ name: 'N', prices: { metal: { buy: 11, sell: 9 } } }, { name: 'O', prices: { metal: { buy: 11, sell: 9 } } })
+      await a.alice.engine.refreshMarkets()
+      expect(Object.values(a.alice.store.get().marketDelays).sort()).toEqual([20, 40, 60])
+      const before = { ...a.alice.store.get().marketDelays }
+      await a.alice.engine.refreshMarkets()
+      expect(a.alice.store.get().marketDelays).toEqual(before)
+    }
+  })
+
+  it('buy: money leaves now, goods arrive after the delay at the locked price', async () => {
+    const a = setup()
+    await a.alice.engine.refreshMarkets()
+    const delay = a.alice.store.get().marketDelays.M
+    await a.alice.engine.buyFromMarket('M', 'metal', 10)
+    expect(res(a.alice).money).toBeCloseTo(1000 - 110)
+    expect(res(a.alice).metal).toBe(100) // not yet
+    expect(Object.keys(a.alice.store.get().deliveries)).toHaveLength(1)
+    a.server.markets[0].prices.metal = { buy: 50, sell: 45 } // price move can't affect it
+    a.clock.now += delay * 1000 - 1
+    a.alice.store.update((s) => tick(s, a.clock.now))
+    expect(res(a.alice).metal).toBe(100)
+    a.clock.now += 1
+    a.alice.store.update((s) => tick(s, a.clock.now))
+    expect(res(a.alice)).toMatchObject({ metal: 110 })
+    expect(res(a.alice).money).toBeCloseTo(890)
+    a.alice.store.update((s) => tick(s, a.clock.now + 1000)) // paid exactly once
+    expect(res(a.alice).metal).toBe(110)
+    expect(Object.keys(a.alice.store.get().deliveries)).toHaveLength(0)
+  })
+
+  it('sell: goods leave now, money arrives after the delay', async () => {
+    const a = setup()
+    await a.alice.engine.refreshMarkets()
+    await a.alice.engine.sellToMarket('M', 'metal', 20)
+    expect(res(a.alice).metal).toBe(80)
+    expect(res(a.alice).money).toBe(1000)
+    arrive(a, a.alice)
+    expect(res(a.alice).money).toBeCloseTo(1180)
+  })
+
+  it('records volume immediately', async () => {
+    const a = setup()
+    await a.alice.engine.refreshMarkets()
+    await a.alice.engine.buyFromMarket('M', 'metal', 10)
+    await a.alice.engine.sellToMarket('M', 'metal', 20)
+    expect(a.server.volumes).toEqual([{ side: 'buy', qty: 10 }, { side: 'sell', qty: 20 }])
   })
 
   it('refuses unaffordable orders and refunds when the price moved', async () => {
@@ -100,6 +154,14 @@ describe('market orders', () => {
     server.markets[0].prices.metal = { buy: 20, sell: 18 }
     await expect(alice.engine.buyFromMarket('M', 'metal', 1)).rejects.toThrow(/changed/)
     expect(res(alice).money).toBe(1000)
+    expect(Object.keys(alice.store.get().deliveries)).toHaveLength(0)
+  })
+
+  it('cannot spend the same money twice while a delivery is pending', async () => {
+    const a = setup()
+    await a.alice.engine.refreshMarkets()
+    await a.alice.engine.buyFromMarket('M', 'metal', 90) // 990
+    await expect(a.alice.engine.buyFromMarket('M', 'metal', 5)).rejects.toThrow(/Not enough money/)
   })
 })
 
