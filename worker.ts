@@ -42,6 +42,8 @@ export const __DO_MANIFEST__ = [
   { binding: 'PRESENCE_ROOMS', className: 'AppPresenceRoom', sqlite: true },
   { binding: 'CRON_ROOMS', className: 'AppCronRoom', sqlite: true },
   { binding: 'JOB_ROOMS', className: 'AppJobRoom', sqlite: true },
+  { binding: 'MARKET_ROOMS', className: 'AppMarketsRoom', sqlite: true },
+  { binding: 'TRADE_ROOMS', className: 'AppTradesRoom', sqlite: true },
 ] as const satisfies DOManifest
 
 export class AppRecordRoom extends RecordRoom<Env> {
@@ -81,6 +83,10 @@ export class AppJobRoom extends JobRoom<Env> {
     return await runJob(job, context, this.env)
   }
 }
+
+// Markets and player-to-player trades (logic in src/server, shared rules in src/shared).
+export { AppMarketsRoom } from './src/server/markets.js'
+export { AppTradesRoom } from './src/server/trades.js'
 
 export interface Env extends DOBindings<typeof __DO_MANIFEST__> {
   ASSETS: Fetcher
