@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 import { useGameTime, useResources } from '@/game'
 import { askResourceAI } from '@/services/ai-service'
 import type { LowResourceGameReaction, LowResourceGameAction } from '@/interfaces/aiReactions'
-        
+
 export function AIPanel() {
   const resources = useResources()
   const { seconds: gameTime } = useGameTime()
@@ -13,13 +13,13 @@ export function AIPanel() {
   const [isProcessing, setIsProcessing] = useState(false)
 
   const handleTransmitToAI = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault() 
     if (!inputText.trim() || isProcessing) return
 
     setIsProcessing(true)
 
     try {
-      const aiResponse = await askResourceAI(inputText, resources, gameTime)
+      const aiResponse = await askResourceAI(env, inputText, resources, gameTime)
       setReaction(aiResponse)
     } catch (err) {
       console.error('AI transmission error:', err)
