@@ -1,69 +1,176 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@theme {
+  --font-sans: "IBM Plex Mono", "Courier New", monospace;
+  --font-mono: "IBM Plex Mono", "Courier New", monospace;
+  --font-heading: "IBM Plex Mono", "Courier New", monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Extra Y2K palette colors */
+  --color-y2k-ink: var(--y2k-ink);
+  --color-y2k-ink-muted: var(--y2k-ink-muted);
+  --color-y2k-blue: var(--y2k-blue);
+  --color-y2k-green: var(--y2k-green);
+  --color-y2k-pink: var(--y2k-pink);
+  --color-y2k-rust: var(--y2k-rust);
+  --color-y2k-red: var(--y2k-red);
+  --color-y2k-copper: var(--y2k-copper);
+  --color-y2k-mint: var(--y2k-mint);
+  --color-y2k-lemon: var(--y2k-lemon);
+  --color-y2k-panel: var(--y2k-panel);
+  --color-y2k-ivory: var(--y2k-ivory);
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+}
+
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color-scheme: dark;
+  color: var(--foreground);
+  background-color: var(--background);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
+
+  /* Terminal theme */
+  --background: #081820;
+  --foreground: #d9fbe8;
+
+  --card: #10252c;
+  --card-foreground: #d9fbe8;
+
+  --popover: #10252c;
+  --popover-foreground: #d9fbe8;
+
+  --primary: #39ff8a;
+  --primary-foreground: #081820;
+
+  --secondary: #18343a;
+  --secondary-foreground: #d9fbe8;
+
+  --muted: #142b32;
+  --muted-foreground: #91b6a9;
+
+  --accent: #ffc66d;
+  --accent-foreground: #081820;
+
+  --destructive: #ff654f;
+
+  --border: #31534f;
+  --input: #31534f;
+  --ring: #39ff8a;
+
+  --radius: 0.35rem;
+
+  /* Extra palette colors */
+  --y2k-ink: #081820;
+  --y2k-ink-muted: #91b6a9;
+  --y2k-blue: #42c7d5;
+  --y2k-green: #39ff8a;
+  --y2k-pink: #ff865e;
+  --y2k-rust: #ff865e;
+  --y2k-red: #ff654f;
+  --y2k-copper: #ffc66d;
+  --y2k-mint: #a2ffcf;
+  --y2k-lemon: #ffe58a;
+  --y2k-panel: #18343a;
+  --y2k-ivory: #d9fbe8;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+a {
+  font-weight: 500;
+  color: var(--y2k-blue);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--y2k-green);
 }
 
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
+  color: var(--y2k-green);
+  text-shadow: 0 0 12px #39ff8a35;
 }
 
+/* Default HTML buttons */
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  color: var(--primary-foreground);
+  background: var(--primary);
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
+button:hover {
+  filter: brightness(1.08);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
   }
 }
