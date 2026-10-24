@@ -2,6 +2,9 @@ import { DEPLETING_KEYS, RESOURCE_KEYS, useDepletion, useResources } from '@/gam
 import type { DepletingKey } from '@/game'
 import { fmt } from './util'
 
+/** Resources visible to the player in the UI — metal and buildings are hidden. */
+const VISIBLE_RESOURCE_KEYS = RESOURCE_KEYS.filter((k) => k !== 'metal' && k !== 'buildings')
+
 /**
  * Shows your resources and lets you change how fast biomass/oxygen drain.
  *
@@ -17,7 +20,7 @@ export function ResourcesPanel() {
     <section>
       <h2>Resources</h2>
       <ul>
-        {RESOURCE_KEYS.map((key) => (
+        {VISIBLE_RESOURCE_KEYS.map((key) => (
           <li key={key}>
             {key}: {fmt(resources[key], key === 'money' ? 2 : 1)}
             {(DEPLETING_KEYS as readonly string[]).includes(key) && (

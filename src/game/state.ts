@@ -8,7 +8,7 @@ import { RESOURCE_KEYS, TRADABLE_KEYS } from '../shared/types'
 import type { Delta, ResourceKey, TradableKey, Trade } from '../shared/types'
 
 /** Resources players may trade (markets and other players). Buildings are owned, not traded, for now. */
-export const PLAYER_TRADABLE_KEYS: TradableKey[] = TRADABLE_KEYS.filter((k) => k !== 'buildings')
+export const PLAYER_TRADABLE_KEYS: TradableKey[] = TRADABLE_KEYS.filter((k) => k !== 'buildings' && k !== 'metal')
 export const isPlayerTradable = (k: unknown): k is TradableKey => (PLAYER_TRADABLE_KEYS as readonly unknown[]).includes(k)
 
 /** Resources that drain over time. */

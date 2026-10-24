@@ -18,7 +18,7 @@ import { describe, fmt, useAttempt } from './util'
 export function PlayerTradePanel() {
   const { players, incoming, outgoing, send, accept, decline, cancel, counter } = usePlayerTrades()
   const [message, attempt] = useAttempt()
-  const [form, setForm] = useState({ to: '', side: 'sell', resource: 'metal', quantity: '1', unitPrice: '10' })
+  const [form, setForm] = useState({ to: '', side: 'sell', resource: 'ammo', quantity: '1', unitPrice: '10' })
   const set = (field: string) => (e: { target: { value: string } }) => setForm({ ...form, [field]: e.target.value })
 
   const request = (): TradeRequestInput => ({
