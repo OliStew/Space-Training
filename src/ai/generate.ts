@@ -15,10 +15,10 @@ const defaultModel = DEEPSPACE_AI_DEFAULTS.summarization // claude-haiku-5-5
 /**
  * Generate a text response from an AI model.
  *
- * @param env - The worker environment (provides the AI proxy binding)
- * @param prompt - The user prompt to send to the model
- * @param options - Optional overrides
- * @param options.model - Model ID (defaults to claude-haiku-5-5)
+ * @param env The worker environment (provides the AI proxy binding)
+ * @param prompt The user prompt to send to the model
+ * @param options Optional overrides
+ * @param options.model Model ID (defaults to claude-haiku-5-5)
  * @returns The generated text response
  */
 export async function generateResponse(

@@ -54,7 +54,7 @@ export function registerGenerateRoutes(app: Hono<AppContext>): void {
     }
 
     try {
-      const advice = await getColonyAdvice(c.env, userMessage, resources, gameTime)
+      const advice = await getColonyAdvice(c.env, userMessage, resources)
       return c.json(advice)
     } catch (error) {
       console.error('Colony advice error:', error)
