@@ -1,12 +1,14 @@
 import { getColonyAdvice} from '../ai/gameAdvisor'
 import type { LowResourceGameReaction } from '../interfaces/aiReactions'
+import type { Env } from '../../worker'
 
 export async function askResourceAI(
-  userCommand: string,
-  resources: Record<string, any>,
-  gameTime: number
+    env: Env,
+    userCommand: string,
+    resources: Record<string, any>,
+    gameTime: number
 ): Promise<LowResourceGameReaction> {
-  return await getColonyAdvice(null, userCommand, resources, gameTime);
+  return await getColonyAdvice(env, userCommand, resources, gameTime);
 }
 
 
