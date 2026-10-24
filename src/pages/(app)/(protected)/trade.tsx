@@ -1,23 +1,30 @@
 /**
- * Trading UI. A thin layer over src/game — swap the components freely; all
- * rules live in the game layer (GameProvider / engine / store).
+ * Trading page — plain layout. Each panel is an independent component in
+ * src/components/trading/ that talks to the game only through the hooks in
+ * src/game/hooks.ts (read the comment at the top of each file). Rewrite any
+ * panel, or rearrange them here, without touching game logic.
  */
 
 import { DebugPanel } from '@/components/trading/DebugPanel'
-import { HistoryLog } from '@/components/trading/HistoryLog'
+import { HistoryPanel } from '@/components/trading/HistoryPanel'
 import { MarketsPanel } from '@/components/trading/MarketsPanel'
 import { PlayerTradePanel } from '@/components/trading/PlayerTradePanel'
-import { ResourceBar } from '@/components/trading/ResourceBar'
+import { ResourcesPanel } from '@/components/trading/ResourcesPanel'
+import { ScenarioPanel } from '@/components/trading/ScenarioPanel'
 
 export default function TradePage() {
   return (
-    <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
-      <ResourceBar />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <MarketsPanel />
-        <PlayerTradePanel />
-      </div>
-      <HistoryLog />
+    <div style={{ padding: 16 }}>
+      <ResourcesPanel />
+      <hr />
+      <ScenarioPanel />
+      <hr />
+      <MarketsPanel />
+      <hr />
+      <PlayerTradePanel />
+      <hr />
+      <HistoryPanel />
+      <hr />
       <DebugPanel />
     </div>
   )
