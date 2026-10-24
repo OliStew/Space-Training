@@ -1,49 +1,106 @@
-import { useDebugResources, useGameTime, useResources } from '@/game'
+import { useState } from 'react'
 import { useGenerate } from '@/hooks/useGenerate'
-import {useState} from "react";
-
+import { useAdvice } from '@/hooks/useAdvice'
+import { Sparkles, Loader2, Send, Lightbulb } from 'lucide-react'
+import { Button } from '@/components/ui'
 
 /**
- * Placeholder for the ai UI. No logic yet — this is just screen space.
- * Replace the contents; the rest of the page does not depend on it.
- *
- * Hooked up, but intentionally unused so far:
- *   resources                  read: { money, metal, ammo, biomass, oxygen, buildings }
- *   addResource(key, amount)   write: give the player `amount` of `key`
- *   removeResource(key, amount) write: take `amount` of `key` (stops at zero)
- *   gameTime                  read: the shared game clock in seconds (also useGameTime().set(seconds) to change it)
- * (add/remove come from useDebugResources; despite the name they are the general write API.)
+ * AI Panel — two modes:
+ * 1. "Get Advice" button: automatically gathers game state and asks the AI for trading advice.
+ * 2. Manual prompt: type a custom question and hit Ask.
  */
 export function AIPanel() {
-    const resources = useResources()
-    const {add: addResource, remove: removeResource} = useDebugResources()
-    const {seconds: gameTime} = useGameTime()
-    void resources, addResource, removeResource, gameTime // available to the scenario code, not used yet
+  const { text: manualText, loading: manualLoading, error: manualError, generate } = useGenerate()
+  const { advice, loading: adviceLoading, error: adviceError, getAdvice } = useAdvice()
 
-    const { text, loading, error, generate } = useGenerate() // AI access; `text` is the AI's response, `generate(prompt)`
-                                                             // is the function to call to generate a response, loading
-                                                             // is a bool indicating whether the AI is currently generating a response
+  const [prompt, setPrompt] = useState('')
 
-    const [prompt, setPrompt] = useState('') // This makes prompt "reactive": whenever setPrompt(value) is called, the HTML will update.
+  const isAdviceMode = advice !== null && adviceError === null
+  const text = isAdviceMode ? advice : manualText
+  const loading = adviceLoading || manualLoading
+  const error = adviceError ?? manualError
 
-    // To modify resources, use the form addResource('money', 100) and removeResource('biomass', 50)
-    // To access resources, use the form resources.money, resources.metal, etc.
-    // Or you can loop through resources to view multiple at once
+  const handleAsk = async () => {
+    if (!prompt.trim() || loading) return
+    await generate(prompt.trim())
+  }
 
+  const handleAdvice = async () => {
+    if (loading) return
+    await getAdvice()
+  }
 
-
-    // Below: the <textarea> allows the user to enter a prompt (and uses setPrompt to make sure the prompt is updated in real-time)
-    // The button calls generate(prompt) when pressed. generate(prompt) sets `text` to the AI's response when it's done.
-    // The curly braces after that just render the text variable if it exists, or the error message if it exists.
-
-    return (
+  return (
+    <section className="rounded-lg border border-border bg-card p-4">
+      <div className="mb-3 flex items-center justify-between">
         <div>
-            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={4}/>
-            <button onClick={() => generate(prompt)} disabled={loading}>
-                {loading ? 'Generating...' : 'Generate'}
-            </button>
-            {error && <p style={{color: 'red'}}>{error}</p>}
-            {text && <pre>{text}</pre>}
+          <h2 className="text-sm font-semibold text-foreground">AI Assistant</h2>
+          <p className="text-xs text-muted-foreground">Get trading advice or ask a question</p>
         </div>
-    )
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleAdvice}
+          disabled={loading}
+          className="flex items-center gap-1.5 text-xs"
+        >
+          {adviceLoading ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Analyzing...
+            </>
+          ) : (
+            <>
+              <Lightbulb className="h-3.5 w-3.5" /> Get Advice
+            </>
+          )}
+        </Button>
+      </div>
+
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="Or ask something..."
+          className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && prompt.trim() && !loading) {
+              handleAsk()
+            }
+          }}
+        />
+        <Button
+          size="sm"
+          disabled={loading || !prompt.trim()}
+          onClick={handleAsk}
+          className="flex items-center gap-1.5"
+        >
+          {manualLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+            </>
+          ) : (
+            <>
+              <Send className="h-4 w-4" />
+            </>
+          )}
+        </Button>
+      </div>
+
+      {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
+
+      {text && (
+        <div className="mt-3 rounded-md border border-border bg-muted p-3">
+          <div className="flex items-start gap-2">
+            {isAdviceMode ? (
+              <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            ) : (
+              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            )}
+            <p className="text-xs text-foreground whitespace-pre-wrap">{text}</p>
+          </div>
+        </div>
+      )}
+    </section>
+  )
 }

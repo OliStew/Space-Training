@@ -5,7 +5,7 @@
  * panel, or rearrange them here, without touching game logic.
  */
 
-import { AiPanel } from '@/components/trading/AiPanel'
+import { AIPanel } from '@/components/aiLogicAndVisual/AiPanel'
 import { DebugPanel } from '@/components/trading/DebugPanel'
 import { HistoryPanel } from '@/components/trading/HistoryPanel'
 import { MarketsPanel } from '@/components/trading/MarketsPanel'
@@ -28,7 +28,7 @@ export default function TradePage() {
       <hr />
       <HistoryPanel />
       <hr />
-      <AiPanel />
+      <AIPanel />
       <hr />
       <DebugPanel />
       <VoiceAssistantPanel />
