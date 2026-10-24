@@ -1,2 +1,6 @@
-import {useResources} from '@/game'
-const resources = useResources();
+import { useResources } from '@/game'
+
+export function useGameAdvisor() {
+  const resources = useResources()
+  return { resources }
+}
