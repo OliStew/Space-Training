@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDebugResources } from '@/game'
+import { useTextToSpeech } from '@/lib/tts'
 import scenariosData from '@/scenarios.json'
 
 interface ScenarioOption {
@@ -26,16 +27,42 @@ interface Scenario {
 
 const allScenarios: Scenario[] = (scenariosData as { scenarios: Scenario[] }).scenarios
 
+function getScenarioSpokenText(scenario: Scenario): string {
+  const optionsText = scenario.options
+    .map((opt) => `Option ${opt.key}: ${opt.label}`)
+    .join('. ')
+  return `Scenario: ${scenario.name}. ${scenario.description} Your options are: ${optionsText}`
+}
+
 export function ScenarioPanel() {
   const { add: addResource, remove: removeResource } = useDebugResources()
+  const { speak, stop, isPlaying, isLoading, error: ttsError } = useTextToSpeech()
+
   const [scenario, setScenario] = useState<Scenario>(() => {
     return allScenarios[Math.floor(Math.random() * allScenarios.length)]
   })
   const [inputText, setInputText] = useState('')
   const [feedback, setFeedback] = useState<string | null>(null)
+  const [autoRead, setAutoRead] = useState(true)
+
+  // Track the scenario ID to avoid duplicate auto-reads on re-renders
+  const lastReadIdRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!scenario || !autoRead) return
+    if (lastReadIdRef.current === scenario.id) return
+    lastReadIdRef.current = scenario.id
+
+    const speechText = getScenarioSpokenText(scenario)
+    speak(speechText).catch((err) => {
+      // Browser autoplay policy might block audio until the first user click
+      console.warn('Auto-read paused until user interaction:', err)
+    })
+  }, [scenario, autoRead, speak])
 
   const nextRandomScenario = () => {
     if (allScenarios.length === 0) return
+    stop()
     let next = scenario
     if (allScenarios.length > 1) {
       while (next.id === scenario?.id) {
@@ -47,7 +74,7 @@ export function ScenarioPanel() {
     setInputText('')
   }
 
-  const applyEffect = (resourceKey: 'biomass' | 'ammo' | 'oxygen', delta: number) => {
+  const applyEffect = (resourceKey: 'biomass' | 'ammo' | 'oxygen' | 'health', delta: number) => {
     if (delta > 0) {
       addResource(resourceKey, delta)
     } else if (delta < 0) {
@@ -56,6 +83,7 @@ export function ScenarioPanel() {
   }
 
   const handleChooseOption = (opt: ScenarioOption) => {
+    stop()
     const changes: string[] = []
     if (opt.effects) {
       if (opt.effects.food) {
@@ -70,10 +98,22 @@ export function ScenarioPanel() {
         applyEffect('oxygen', opt.effects.oxygen)
         changes.push(`oxygen ${opt.effects.oxygen > 0 ? '+' : ''}${opt.effects.oxygen}`)
       }
+      if (opt.effects.base_health_pct) {
+        applyEffect('health', opt.effects.base_health_pct)
+        changes.push(`health ${opt.effects.base_health_pct > 0 ? '+' : ''}${opt.effects.base_health_pct}%`)
+      }
     }
 
     const effectStr = changes.length > 0 ? ` (${changes.join(', ')})` : ''
-    setFeedback(`Selected Option ${opt.key}: "${opt.label}"${effectStr}`)
+    const msg = `Selected Option ${opt.key}: "${opt.label}"${effectStr}`
+    setFeedback(msg)
+
+    if (autoRead) {
+      const outcomeSpeech = `You chose Option ${opt.key}: ${opt.label}.${
+        changes.length > 0 ? ' Result: ' + changes.join(', ') : ''
+      }`
+      speak(outcomeSpeech).catch(() => {})
+    }
   }
 
   const handleTextSubmit = () => {
@@ -145,9 +185,28 @@ export function ScenarioPanel() {
           }}
         />{' '}
         <button onClick={handleTextSubmit}>Submit</button>{' '}
-        <button onClick={nextRandomScenario}>New Scenario</button>
+        <button onClick={nextRandomScenario}>New Scenario</button>{' '}
+        {isPlaying ? (
+          <button onClick={stop}>Stop Voice</button>
+        ) : (
+          <button
+            disabled={isLoading}
+            onClick={() => speak(getScenarioSpokenText(scenario)).catch(() => {})}
+          >
+            {isLoading ? 'Loading Voice...' : 'Read Aloud'}
+          </button>
+        )}{' '}
+        <label style={{ marginLeft: 8, fontSize: '0.9em' }}>
+          <input
+            type="checkbox"
+            checked={autoRead}
+            onChange={(e) => setAutoRead(e.target.checked)}
+          />{' '}
+          Auto-read with Eva
+        </label>
       </p>
       {feedback && <p>{feedback}</p>}
+      {ttsError && <p style={{ color: 'red' }}>Voice Error: {ttsError}</p>}
     </section>
   )
 }
