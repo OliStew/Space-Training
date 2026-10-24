@@ -2,18 +2,10 @@ import type { LowResourceGameReaction } from '../interfaces/aiReactions'
 import type { Env } from '../../worker'
 
 export async function askResourceAI(
-    env: Env,
-    userCommand: string,
-    resources: Record<string, any>,
-    gameTime: number
+  userCommand: string,
+  resources: Record<string, any>,
+  gameTime: number
 ): Promise<LowResourceGameReaction> {
-<<<<<<< HEAD
-<<<<<<< HEAD
-  return await getColonyAdvice(env, userCommand, resources, gameTime);
-=======
-=======
-  return await getColonyAdvice(env, userCommand, resources, gameTime);
->>>>>>> d0916dae14347a2a5a3a690d384678bc53039b79
   const response = await fetch('/api/colony-advice', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -30,10 +22,6 @@ export async function askResourceAI(
   }
 
   return response.json() as Promise<LowResourceGameReaction>
-<<<<<<< HEAD
->>>>>>> d784a1440254fe7654d2416167e818e78b8b95cb
-=======
->>>>>>> d0916dae14347a2a5a3a690d384678bc53039b79
 }
 
 

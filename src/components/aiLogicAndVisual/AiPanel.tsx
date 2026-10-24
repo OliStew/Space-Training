@@ -19,7 +19,7 @@ export function AIPanel() {
     setIsProcessing(true)
 
     try {
-      const aiResponse = await askResourceAI(env, inputText, resources, gameTime)
+      const aiResponse = await askResourceAI(inputText, resources, gameTime)
       setReaction(aiResponse)
     } catch (err) {
       console.error('AI transmission error:', err)
