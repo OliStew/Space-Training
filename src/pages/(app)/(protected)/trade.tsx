@@ -8,6 +8,7 @@ import { HistoryLog } from '@/components/trading/HistoryLog'
 import { MarketsPanel } from '@/components/trading/MarketsPanel'
 import { PlayerTradePanel } from '@/components/trading/PlayerTradePanel'
 import { ResourceBar } from '@/components/trading/ResourceBar'
+import { VoiceAssistantPanel } from '@/components/trading/VoiceAssistantPanel'
 
 export default function TradePage() {
   return (
@@ -19,6 +20,7 @@ export default function TradePage() {
       </div>
       <HistoryLog />
       <DebugPanel />
+      <VoiceAssistantPanel />
     </div>
   )
 }
