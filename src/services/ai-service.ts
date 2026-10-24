@@ -1,4 +1,3 @@
-import { getColonyAdvice} from '../ai/gameAdvisor'
 import type { LowResourceGameReaction } from '../interfaces/aiReactions'
 
 export async function askResourceAI(
@@ -6,7 +5,22 @@ export async function askResourceAI(
   resources: Record<string, any>,
   gameTime: number
 ): Promise<LowResourceGameReaction> {
-  return await getColonyAdvice(null, userCommand, resources, gameTime);
+  const response = await fetch('/api/colony-advice', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userMessage: userCommand,
+      resources,
+      gameTime,
+    }),
+  })
+
+  if (!response.ok) {
+    const errorBody = (await response.json().catch(() => ({}))) as Record<string, unknown>
+    throw new Error(String(errorBody.error || `API error: ${response.status}`))
+  }
+
+  return response.json() as Promise<LowResourceGameReaction>
 }
 
 
