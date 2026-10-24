@@ -49,11 +49,11 @@ You MUST return ONLY a raw JSON object matching this exact TypeScript structure:
   ]
 }
 
-STRICT THRESHOLD RULES:
+STRICT VIBE AND THRESHOLD RULES:
 1. "OPTIMAL": Set to "OPTIMAL" only when everything is exceptionally high (all resources are over 90 and money is over 2000).
 2. "STABLE": Set to "STABLE" when resources are safe and above danger lines, but not at peak optimal levels. 
 3. "WARNING": Set to "WARNING" when resources start dropping below 30.
-4. "CRITICAL": Set to "CRITICAL" during severe emergencies (Oxygen < 15 or near-total depletion).
+4. "CRITICAL": Set to "CRITICAL" during severe emergencies (Oxygen < 15).
 5. SAFE ZONE BUFFER: 
    - If Oxygen is 15 or higher, do NOT trigger emergency oxygen actions. Treat it as safe.
    - If Space Goop is 10 or higher, do NOT panic about food/goop.
