@@ -4,7 +4,7 @@ import * as React from "react"
 import { Form as FormPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
-import { Label } from "@/components/ui/label"
+import { Label } from "@/components/Y2kUiComp/components/ui/label"
 
 function Form({ ...props }: React.ComponentProps<typeof FormPrimitive.Root>) {
   return <FormPrimitive.Root data-slot="form" {...props} />
