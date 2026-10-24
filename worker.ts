@@ -26,6 +26,7 @@ import { tasks as cronTasks, runTask as runCronTask } from './src/cron.js'
 import { runJob } from './src/jobs.js'
 import { schemas } from './src/schemas.js'
 import { registerActionRoutes } from './src/server/action-routes.js'
+import { registerTtsRoutes } from './src/server/tts-routes.js'
 import {
   registerAuthAndIntegrationRoutes,
   registerPlatformProxyRoutes,
@@ -42,6 +43,8 @@ export const __DO_MANIFEST__ = [
   { binding: 'PRESENCE_ROOMS', className: 'AppPresenceRoom', sqlite: true },
   { binding: 'CRON_ROOMS', className: 'AppCronRoom', sqlite: true },
   { binding: 'JOB_ROOMS', className: 'AppJobRoom', sqlite: true },
+  { binding: 'MARKET_ROOMS', className: 'AppMarketsRoom', sqlite: true },
+  { binding: 'TRADE_ROOMS', className: 'AppTradesRoom', sqlite: true },
 ] as const satisfies DOManifest
 
 export class AppRecordRoom extends RecordRoom<Env> {
@@ -82,7 +85,13 @@ export class AppJobRoom extends JobRoom<Env> {
   }
 }
 
+// Markets and player-to-player trades (logic in src/server, shared rules in src/shared).
+export { AppMarketsRoom } from './src/server/markets.js'
+export { AppTradesRoom } from './src/server/trades.js'
+
 export interface Env extends DOBindings<typeof __DO_MANIFEST__> {
+  /** ElevenLabs API Key for Text-to-Speech */
+  ELEVENLABS_API_KEY?: string
   ASSETS: Fetcher
   /**
    * Platform service binding in production; deepspace dev supplies the URL
@@ -137,6 +146,7 @@ app.use('*', async (c, next) => {
 registerAuthAndIntegrationRoutes(app)
 registerRealtimeRoutes(app)
 registerActionRoutes(app, resolveAuth)
+registerTtsRoutes(app)
 // Every scaffold exposes selected tools through HTTP, MCP and browser tools.
 // Only copilot owns the collections needed for the in-app chat UI.
 registerAgent(app, {

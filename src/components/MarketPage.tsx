@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useYjsRoom } from 'deepspace'
 import { Button } from '@/components/ui'
+import { useTextToSpeech } from '@/lib/tts'
+import { Volume2, VolumeX, Loader2 } from 'lucide-react'
 
 const minPrice = 1.0
+
+
 
 /**
  * Solves the system:
@@ -25,6 +29,10 @@ export default function MarketPage() {
 
   // Local per-user money (not synced — each user tracks their own)
   const [money, setMoney] = useState(100)
+
+  // Text to Speech
+  const { speak, stop, isPlaying, isLoading, error: ttsError } = useTextToSpeech()
+  const [customText, setCustomText] = useState('')
 
   // Mirror shared values into React state on every Yjs update
   // Initial values give the market a non-zero starting price
@@ -116,6 +124,68 @@ export default function MarketPage() {
         Price = max(1.0, (Demand − Supply) / 2) &middot; Buying (demand) costs price &middot; Selling
         (supply) earns price
       </p>
+
+      {/* ElevenLabs TTS Voice Section */}
+      <div className="mt-8 rounded-lg border border-border bg-card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Voice Assistant</h2>
+            <p className="text-xs text-muted-foreground">ElevenLabs Flash 2.5 &middot; Eva</p>
+          </div>
+          {isPlaying ? (
+            <Button variant="outline" size="sm" onClick={stop} className="flex items-center gap-1.5 text-destructive">
+              <VolumeX className="h-4 w-4" /> Stop
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isLoading}
+              onClick={() => {
+                const textToSpeak = customText.trim() || `The current market price is ${price.toFixed(2)} credits, with demand at ${demand} and supply at ${supply}.`
+                speak(textToSpeak).catch(() => {})
+              }}
+              className="flex items-center gap-1.5"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Synthesizing...
+                </>
+              ) : (
+                <>
+                  <Volume2 className="h-4 w-4" /> Speak Status
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={customText}
+            onChange={(e) => setCustomText(e.target.value)}
+            placeholder="Type custom text to speak..."
+            className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && customText.trim() && !isLoading) {
+                speak(customText.trim()).catch(() => {})
+              }
+            }}
+          />
+          <Button
+            size="sm"
+            disabled={isLoading || !customText.trim()}
+            onClick={() => speak(customText.trim()).catch(() => {})}
+          >
+            Speak
+          </Button>
+        </div>
+
+        {ttsError && (
+          <p className="mt-2 text-xs text-destructive">{ttsError}</p>
+        )}
+      </div>
     </div>
   )
 }
