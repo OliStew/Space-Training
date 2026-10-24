@@ -5,6 +5,8 @@
  * panel, or rearrange them here, without touching game logic.
  */
 
+import { useEffect } from 'react'
+
 import { AIPanel } from '@/components/aiLogicAndVisual/AiPanel'
 import { DebugPanel } from '@/components/trading/DebugPanel'
 import { HistoryPanel } from '@/components/trading/HistoryPanel'
@@ -14,8 +16,16 @@ import { PlayerTradePanel } from '@/components/trading/PlayerTradePanel'
 import { VoiceAssistantPanel } from '@/components/trading/VoiceAssistantPanel'
 import { ResourcesPanel } from '@/components/trading/ResourcesPanel'
 import { ScenarioPanel } from '@/components/trading/ScenarioPanel'
+import '@/components/Y2kUiComp/styles.css'
 
 export default function TradePage() {
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', 'y2k')
+    return () => {
+      document.documentElement.removeAttribute('data-theme')
+    }
+  }, [])
+
   return (
     <div style={{ padding: 16 }}>
       <ResourcesPanel />
