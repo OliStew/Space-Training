@@ -4,7 +4,7 @@ import * as React from "react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
-import { WindowControls } from "@/components/ui/window-controls"
+import { WindowControls } from "@/components/Y2kUiComp/components/ui/window-controls"
 
 function Dialog({
   ...props

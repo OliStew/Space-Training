@@ -44,3 +44,38 @@
   --color-shell: #fafafa;
   --color-shell-panel: #ffffff;
 }
+
+/* Y2K Terminal — dark theme with green-on-dark terminal aesthetic */
+[data-theme="y2k"] {
+  --color-background: #081820;
+  --color-foreground: #d9fbe8;
+  --color-card: #10252c;
+  --color-card-foreground: #d9fbe8;
+  --color-popover: #10252c;
+  --color-popover-foreground: #d9fbe8;
+  --color-primary: #39ff8a;
+  --color-primary-foreground: #081820;
+  --color-secondary: #18343a;
+  --color-secondary-foreground: #d9fbe8;
+  --color-muted: #142b32;
+  --color-muted-foreground: #91b6a9;
+  --color-accent: #ffc66d;
+  --color-accent-foreground: #081820;
+  --color-destructive: #ff654f;
+  --color-border: #31534f;
+  --color-input: #31534f;
+  --color-ring: #39ff8a;
+  --radius: 0.35rem;
+  --color-y2k-ink: #081820;
+  --color-y2k-ink-muted: #91b6a9;
+  --color-y2k-blue: #42c7d5;
+  --color-y2k-green: #39ff8a;
+  --color-y2k-pink: #ff865e;
+  --color-y2k-rust: #ff865e;
+  --color-y2k-red: #ff654f;
+  --color-y2k-copper: #ffc66d;
+  --color-y2k-mint: #a2ffcf;
+  --color-y2k-lemon: #ffe58a;
+  --color-y2k-panel: #18343a;
+  --color-y2k-ivory: #d9fbe8;
+}

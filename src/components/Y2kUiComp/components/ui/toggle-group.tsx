@@ -5,7 +5,7 @@ import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui"
 import { type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
-import { toggleVariants } from "@/components/ui/toggle"
+import { toggleVariants } from "@/components/Y2kUiComp/components/ui/toggle"
 
 function ToggleGroup({
   className,

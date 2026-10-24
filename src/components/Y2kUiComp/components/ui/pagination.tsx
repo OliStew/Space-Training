@@ -56,7 +56,7 @@ const PaginationLink = React.forwardRef<HTMLAnchorElement, PaginationLinkProps>(
     { className, isActive, size = "default", asChild = false, ...props },
     ref,
   ) => {
-    const Comp = asChild ? Slot : "a"
+    const Comp = asChild ? Slot.Root : "a"
     return (
       <Comp
         ref={ref}
@@ -88,7 +88,7 @@ const PaginationPrevious = React.forwardRef<
   HTMLAnchorElement,
   PaginationPreviousProps
 >(({ className, asChild = false, ...props }, ref) => {
-  const Comp = asChild ? Slot : "a"
+  const Comp = asChild ? Slot.Root : "a"
   return (
     <Comp
       ref={ref}
@@ -116,7 +116,7 @@ const PaginationNext = React.forwardRef<
   HTMLAnchorElement,
   PaginationNextProps
 >(({ className, asChild = false, ...props }, ref) => {
-  const Comp = asChild ? Slot : "a"
+  const Comp = asChild ? Slot.Root : "a"
   return (
     <Comp
       ref={ref}

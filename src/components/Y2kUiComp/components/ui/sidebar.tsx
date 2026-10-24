@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
 
 import { cn } from "@/lib/utils"
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useIsMobile } from "@/components/Y2kUiComp/hooks/use-mobile"
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
