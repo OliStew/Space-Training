@@ -2,10 +2,40 @@ import type { ActionHandler, ActionResult } from 'deepspace/worker'
 import { generateResponse } from '../ai/generate.js'
 import type { Env } from '../../worker'
 
-/** Fetch the Markets Durable Object stub (single instance per app). */
-function getMarketsStub(env: Env) {
-  return env.MARKET_ROOMS.get(env.MARKET_ROOMS.idFromName('default'))
+type Params = Record<string, unknown>
+
+/** Call the Markets Durable Object (single instance per app). */
+async function markets(env: Env, path: string, init?: { method?: string; body?: Params }): Promise<ActionResult> {
+  const stub = env.MARKET_ROOMS.get(env.MARKET_ROOMS.idFromName('default'))
+  return relay(await stub.fetch(`https://internal${path}`, toInit(init)))
 }
+
+/** Call the Trades Durable Object, always stamping the verified caller. */
+async function trades(env: Env, userId: string, path: string, body: Params = {}): Promise<ActionResult> {
+  const stub = env.TRADE_ROOMS.get(env.TRADE_ROOMS.idFromName('default'))
+  return relay(await stub.fetch(`https://internal${path}`, toInit({ method: 'POST', body: { ...body, userId } })))
+}
+
+function toInit(init?: { method?: string; body?: Params }): RequestInit {
+  return {
+    method: init?.method ?? (init?.body ? 'POST' : 'GET'),
+    headers: { 'Content-Type': 'application/json' },
+    body: init?.body ? JSON.stringify(init.body) : undefined,
+  }
+}
+
+/** DO responses are `{ error }` on failure; otherwise the body is the data. */
+async function relay(res: Response): Promise<ActionResult> {
+  const payload = (await res.json()) as Params
+  if (!res.ok) return { success: false, error: String(payload.error ?? 'Request failed'), code: typeof payload.code === 'string' ? payload.code : undefined }
+  return { success: true, data: 'data' in payload ? payload.data : payload }
+}
+
+const str = (v: unknown) => (typeof v === 'string' ? v : '')
+
+/** Market administration is limited to the app owner. */
+const ownerOnly = (userId: string, env: Env): ActionResult | null =>
+  userId === env.OWNER_USER_ID ? null : { success: false, error: 'Only the app owner can do that' }
 
 export const actions: Record<string, ActionHandler<Env>> = {
   generate: async ({ params, env }): Promise<ActionResult> => {
@@ -18,104 +48,45 @@ export const actions: Record<string, ActionHandler<Env>> = {
     return { success: true, data: { text } }
   },
 
-  // ---- Market actions -----------------------------------------------------
+  // ---- Markets ------------------------------------------------------------
 
-  marketBuy: async ({ params, env }): Promise<ActionResult> => {
-    const market = params.market as string | undefined
-    const resource = params.resource as string | undefined
-    if (!market || typeof market !== 'string') {
-      return { success: false, error: '"market" is required' }
-    }
-    if (!resource || typeof resource !== 'string') {
-      return { success: false, error: '"resource" is required' }
-    }
-    const stub = getMarketsStub(env)
-    const res = await stub.fetch('/buy', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ market, resource }),
-    })
-    const data = await res.json()
-    if (!res.ok) return { success: false, error: (data as { error?: string }).error ?? 'Request failed' }
-    return { success: true, data }
+  /** Current markets, config, and when prices next update. */
+  marketSnapshot: ({ env }) => markets(env, '/snapshot'),
+
+  /** { market, resource, quantity, expectedPrice? } — executes at the current price. */
+  marketBuy: ({ params, env }) =>
+    markets(env, '/order', { body: { side: 'buy', market: params.market, resource: params.resource, quantity: params.quantity, expectedPrice: params.expectedPrice } }),
+
+  marketSell: ({ params, env }) =>
+    markets(env, '/order', { body: { side: 'sell', market: params.market, resource: params.resource, quantity: params.quantity, expectedPrice: params.expectedPrice } }),
+
+  /** Owner: create/replace a market. prices: { metal: 10 } or { metal: { buy: 11, sell: 9 } }. */
+  marketCreate: async ({ params, env, userId }) =>
+    ownerOnly(userId, env) ?? markets(env, '/markets', { body: { name: params.name, prices: params.prices } }),
+
+  marketRemove: async ({ params, env, userId }) =>
+    ownerOnly(userId, env) ??
+    markets(env, `/markets?name=${encodeURIComponent(str(params.name))}`, { method: 'DELETE' }),
+
+  /** Read config; with any config field set (owner only), update it. */
+  marketConfig: async ({ params, env, userId }) => {
+    const fields = ['batchInterval', 'interest', 'effect', 'impact', 'maxShift', 'spread', 'minPrice']
+    const update = Object.fromEntries(fields.filter((f) => f in params).map((f) => [f, params[f]]))
+    if (Object.keys(update).length === 0) return markets(env, '/config')
+    return ownerOnly(userId, env) ?? markets(env, '/config', { body: update })
   },
 
-  marketSell: async ({ params, env }): Promise<ActionResult> => {
-    const market = params.market as string | undefined
-    const resource = params.resource as string | undefined
-    if (!market || typeof market !== 'string') {
-      return { success: false, error: '"market" is required' }
-    }
-    if (!resource || typeof resource !== 'string') {
-      return { success: false, error: '"resource" is required' }
-    }
-    const stub = getMarketsStub(env)
-    const res = await stub.fetch('/sell', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ market, resource }),
-    })
-    const data = await res.json()
-    if (!res.ok) return { success: false, error: (data as { error?: string }).error ?? 'Request failed' }
-    return { success: true, data }
-  },
+  // ---- Player-to-player trades ---------------------------------------------
 
-  marketList: async ({ params, env }): Promise<ActionResult> => {
-    const stub = getMarketsStub(env)
-    const res = await stub.fetch('/markets')
-    const data = await res.json()
-    if (!res.ok) return { success: false, error: (data as { error?: string }).error ?? 'Request failed' }
-    return { success: true, data }
-  },
+  /** Heartbeat: registers { name, email } and returns this player's open trades + known names. */
+  tradeSync: ({ params, env, userId }) =>
+    trades(env, userId, '/sync', { name: str(params.name), email: str(params.email) || undefined }),
 
-  marketCreate: async ({ params, env }): Promise<ActionResult> => {
-    const name = params.name as string | undefined
-    const prices = params.prices as Record<string, number> | undefined
-    if (!name || typeof name !== 'string') {
-      return { success: false, error: '"name" is required' }
-    }
-    if (!prices || typeof prices !== 'object') {
-      return { success: false, error: '"prices" object is required' }
-    }
-    const stub = getMarketsStub(env)
-    const res = await stub.fetch('/markets', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, prices }),
-    })
-    const data = await res.json()
-    if (!res.ok) return { success: false, error: (data as { error?: string }).error ?? 'Request failed' }
-    return { success: true, data }
-  },
-
-  marketConfig: async ({ params, env }): Promise<ActionResult> => {
-    const stub = getMarketsStub(env)
-    // If any config fields are provided, update; otherwise just read
-    const hasConfig =
-      typeof params.batchInterval === 'number' ||
-      typeof params.interest === 'number' ||
-      typeof params.effect === 'number' ||
-      typeof params.impact === 'number'
-
-    if (hasConfig) {
-      const res = await stub.fetch('/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          batchInterval: params.batchInterval,
-          interest: params.interest,
-          effect: params.effect,
-          impact: params.impact,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) return { success: false, error: (data as { error?: string }).error ?? 'Request failed' }
-      return { success: true, data }
-    } else {
-      const res = await stub.fetch('/config')
-      const data = await res.json()
-      if (!res.ok) return { success: false, error: (data as { error?: string }).error ?? 'Request failed' }
-      return { success: true, data }
-    }
-  },
+  /** { id (client-chosen), trade: { to, side, resource, quantity, unitPrice } } */
+  tradeSend: ({ params, env, userId }) => trades(env, userId, '/send', { id: params.id, trade: params.trade }),
+  tradeAccept: ({ params, env, userId }) => trades(env, userId, '/accept', { id: params.id }),
+  tradeDecline: ({ params, env, userId }) => trades(env, userId, '/decline', { id: params.id }),
+  tradeCancel: ({ params, env, userId }) => trades(env, userId, '/cancel', { id: params.id }),
+  /** Report that this client applied the trade's final outcome. */
+  tradeAck: ({ params, env, userId }) => trades(env, userId, '/ack', { id: params.id }),
 }
