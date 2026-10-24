@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useYjsRoom } from 'deepspace'
 import { Button } from '@/components/ui'
+import {generate} from '@/lib/generate'
 
 const minPrice = 1.0
+
+
 
 /**
  * Solves the system:
@@ -25,6 +28,17 @@ export default function MarketPage() {
 
   // Local per-user money (not synced — each user tracks their own)
   const [money, setMoney] = useState(100)
+
+  // AI response fetched on mount
+/*  const [aiResponse, setAiResponse] = useState('')
+
+  useEffect(() => {
+    if (!synced) return
+    generate('Say hello.').then(setAiResponse).catch((err) => {
+      console.error('AI generate failed:', err)
+      setAiResponse(`Error: ${err.message}`)
+    })
+  }, [synced]) */
 
   // Mirror shared values into React state on every Yjs update
   // Initial values give the market a non-zero starting price
@@ -116,6 +130,11 @@ export default function MarketPage() {
         Price = max(1.0, (Demand − Supply) / 2) &middot; Buying (demand) costs price &middot; Selling
         (supply) earns price
       </p>
+{aiResponse && (
+      <p className="mt-4 text-sm text-muted-foreground">
+        AI Response: {"aiResponse"}
+      </p>
+)}
     </div>
   )
 }
