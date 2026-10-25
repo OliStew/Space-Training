@@ -13,11 +13,11 @@
 import { round2 } from '../shared/pricing'
 import { tradeLegs, validateRequest } from '../shared/trade-book'
 import { TRADE_TTL_MS } from '../shared/types'
-import type { MarketEntry, MarketPrice, MarketsConfig, OrderReceipt, TradableKey, Trade, TradeRequestInput } from '../shared/types'
+import type { Attack, MarketEntry, MarketPrice, MarketsConfig, OrderReceipt, TradableKey, Trade, TradeRequestInput } from '../shared/types'
 import { ApiError } from './api'
 import type { GameApi } from './api'
 import { Observable } from './observable'
-import { addHistory, applyDelta, assignMarketDelays, cancelDelivery, isPlayerTradable, placeDelivery, placeHold, releaseHold, resolveHold, spend } from './state'
+import { addHistory, applyCombatOutcome, applyDelta, assignMarketDelays, cancelDelivery, isPlayerTradable, placeDelivery, placeHold, releaseHold, resolveHold, spend, spendAmmo } from './state'
 import type { Delivery, Hold } from './state'
 import type { GameStore } from './store'
 
@@ -32,6 +32,10 @@ export interface NetState {
   incoming: Trade[]
   /** Your pending trade requests. */
   outgoing: Trade[]
+  /** Pending attacks other players launched at you. */
+  incomingAttacks: Attack[]
+  /** Your attacks still waiting for a response. */
+  outgoingAttacks: Attack[]
   /** Names of players you can trade with. */
   players: string[]
   error: string | null
@@ -55,6 +59,8 @@ export class TradingEngine {
     clockSkew: 0,
     incoming: [],
     outgoing: [],
+    incomingAttacks: [],
+    outgoingAttacks: [],
     players: [],
     error: null,
   })
@@ -288,15 +294,82 @@ export class TradingEngine {
       }
     }
 
+    this.settleAttacks(me.id, result.attacks ?? [], now)
+
     const pending = result.trades.filter((t) => t.status === 'pending')
     const holds = this.store.get().holds
     this.patch({
       incoming: pending.filter((t) => t.to === me.id && !holds[t.id]),
       outgoing: pending.filter((t) => t.from === me.id),
+      incomingAttacks: (result.attacks ?? []).filter((a) => a.status === 'pending' && a.to === me.id),
+      outgoingAttacks: (result.attacks ?? []).filter((a) => a.status === 'pending' && a.from === me.id),
       players: result.players,
       clockSkew: result.serverTime - now,
       error: null,
     })
+  }
+
+  // ---- Combat -------------------------------------------------------------------
+
+  /** Attack a player by name/email, spending `ammo` now. They have ATTACK_ARRIVAL_TIME seconds to respond. */
+  async attack(to: string, ammo: number): Promise<Attack> {
+    if (!Number.isInteger(ammo) || ammo < 1) throw new Error('Ammo must be a whole number of at least 1')
+    if (!to.trim()) throw new Error('Choose a player to attack')
+    if (!this.store.tryUpdate((s) => spendAmmo(s, ammo))) throw new Error(`Not enough ammo (you have ${Math.floor(this.store.get().resources.ammo)})`)
+    const id = this.newId()
+    try {
+      const attack = await this.api.attack(id, to.trim(), ammo)
+      this.store.update((s) => addHistory(s, `You attacked ${attack.toName} with ${ammo} ammo`, this.now()))
+      void this.syncTrades()
+      return attack
+    } catch (e) {
+      // Only a definite refusal refunds; the ammo is gone if the request may have landed.
+      if (e instanceof ApiError) this.store.update((s) => applyDelta(s, { ammo }))
+      throw e
+    }
+  }
+
+  /** Respond to an incoming attack with `ammo` (0 allowed). The outcome is applied right away. */
+  async defend(id: string, ammo: number): Promise<Attack> {
+    const incoming = this.net.get().incomingAttacks.find((a) => a.id === id)
+    if (!incoming) throw new Error('That attack is no longer available')
+    if (!Number.isInteger(ammo) || ammo < 0) throw new Error('Ammo must be a whole number of 0 or more')
+    if (this.serverNow() > incoming.expiresAt) throw new Error('Too late to respond — the attack has landed')
+    if (ammo > 0 && !this.store.tryUpdate((s) => spendAmmo(s, ammo))) throw new Error('Not enough ammo')
+    let attack: Attack
+    try {
+      attack = await this.api.defend(id, ammo)
+    } catch (e) {
+      if (e instanceof ApiError) {
+        this.store.update((s) => applyDelta(s, { ammo }))
+        void this.syncTrades()
+      }
+      throw e
+    }
+    this.applyAttack(attack, 'defender', this.now())
+    this.patch({ incomingAttacks: this.net.get().incomingAttacks.filter((a) => a.id !== id) })
+    void this.api.ackAttack(id).catch(() => {})
+    return attack
+  }
+
+  /** Apply the outcome of every resolved attack we have not applied yet, then ack it. */
+  private settleAttacks(meId: string, attacks: Attack[], now: number) {
+    for (const a of attacks) {
+      if (a.status !== 'resolved') continue
+      if (a.to === meId) this.applyAttack(a, 'defender', now)
+      else if (a.from === meId) this.applyAttack(a, 'attacker', now)
+      void this.api.ackAttack(a.id).catch(() => {})
+    }
+  }
+
+  private applyAttack(a: Attack, role: 'attacker' | 'defender', now: number) {
+    const damage = a.damage ?? 0
+    const defended = a.defenseAmmo ?? 0
+    const text =
+      role === 'defender'
+        ? `${a.fromName} attacked you with ${a.ammo} ammo; you defended with ${defended}` + (damage > 0 ? ` and lost ${damage} health` : ' and took no harm')
+        : `Your ${a.ammo} ammo attack on ${a.toName} met ${defended} ammo of defense: ${damage > 0 ? `${damage} damage dealt` : 'no damage dealt'}`
+    this.store.update((s) => applyCombatOutcome(s, a.id, role, text, damage, now))
   }
 
   private dropLocal(id: string) {

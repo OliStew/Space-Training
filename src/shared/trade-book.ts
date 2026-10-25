@@ -9,7 +9,7 @@
  */
 
 import { TRADE_TTL_MS, isTradable } from './types'
-import type { Delta, Trade, TradeRequestInput } from './types'
+import type { Attack, Delta, Trade, TradeRequestInput } from './types'
 import { round2 } from './pricing'
 
 export interface Player {
@@ -21,6 +21,8 @@ export interface Player {
 export interface TradeBookState {
   trades: Record<string, Trade>
   players: Record<string, Player>
+  /** Combat attacks (see combat.ts). Absent in books saved before combat existed. */
+  attacks?: Record<string, Attack>
 }
 
 export interface BookFail {
@@ -41,7 +43,7 @@ const MAX_QUANTITY = 1_000_000
 const MAX_UNIT_PRICE = 1_000_000_000
 
 export function emptyBook(): TradeBookState {
-  return { trades: {}, players: {} }
+  return { trades: {}, players: {}, attacks: {} }
 }
 
 // ---- Settlement math (shared with the client) ---------------------------------

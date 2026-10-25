@@ -1,5 +1,6 @@
 import { callAction } from '@/lib/actions'
 import type {
+  Attack,
   MarketsSnapshot,
   OrderReceipt,
   Trade,
@@ -25,6 +26,9 @@ export interface GameApi {
   declineTrade(id: string): Promise<Trade>
   cancelTrade(id: string): Promise<Trade>
   ackTrade(id: string): Promise<void>
+  attack(id: string, to: string, ammo: number): Promise<Attack>
+  defend(id: string, ammo: number): Promise<Attack>
+  ackAttack(id: string): Promise<void>
 }
 
 async function call<T>(name: string, params: Record<string, unknown> = {}): Promise<T> {
@@ -43,4 +47,7 @@ export const serverApi: GameApi = {
   declineTrade: (id) => call('tradeDecline', { id }),
   cancelTrade: (id) => call('tradeCancel', { id }),
   ackTrade: async (id) => void (await call('tradeAck', { id })),
+  attack: (id, to, ammo) => call('combatAttack', { id, to, ammo }),
+  defend: (id, ammo) => call('combatDefend', { id, ammo }),
+  ackAttack: async (id) => void (await call('combatAck', { id })),
 }

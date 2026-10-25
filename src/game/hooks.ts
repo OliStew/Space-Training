@@ -14,6 +14,7 @@
  *  useDepletion()    how fast biomass and oxygen drain, and a setter
  *  useMarkets()      market prices, travel times, in-transit deliveries + buy() / sell()
  *  usePlayerTrades() send / accept / decline / cancel trades with other players
+ *  useCombat()       attack players with ammo, respond to attacks aimed at you
  *  useHistory()      log of what happened
  *  useDebugResources() add()/remove() any resource (temporary cheat buttons)
  */
@@ -22,10 +23,12 @@ import { useCallback } from 'react'
 import { useGame, useNow } from './GameProvider'
 import { applyDelta, DEPLETING_KEYS, PLAYER_TRADABLE_KEYS, setDepletion, setGameTime } from './state'
 import type { DepletingKey, HistoryEntry } from './state'
+import { requiredDefense } from '../shared/combat'
 import { tradeLegs } from '../shared/trade-book'
-import type { Delta, MarketEntry, OrderReceipt, ResourceKey, TradableKey, Trade, TradeRequestInput } from '../shared/types'
+import type { Attack, Delta, MarketEntry, OrderReceipt, ResourceKey, TradableKey, Trade, TradeRequestInput } from '../shared/types'
 
 export { RESOURCE_KEYS, TRADE_TTL_MS } from '../shared/types'
+export { ATTACK_ARRIVAL_TIME } from '../shared/types'
 export { DEPLETING_KEYS, PLAYER_TRADABLE_KEYS }
 export type { Delta, DepletingKey, HistoryEntry, MarketEntry, OrderReceipt, ResourceKey, TradableKey, TradeRequestInput }
 
@@ -203,6 +206,45 @@ export function usePlayerTrades(): PlayerTrades {
     decline: (id) => engine.declineTrade(id),
     cancel: (id) => engine.cancelTrade(id),
     counter,
+  }
+}
+
+// ---- Combat ---------------------------------------------------------------------
+
+export interface AttackView extends Attack {
+  /** Whole seconds left to respond (0 when the attack has landed). */
+  secondsLeft: number
+  /** Ammo that fully defends against it (no harm taken). */
+  requiredDefense: number
+}
+
+export interface Combat {
+  /** Names you can attack (emails also work). */
+  players: string[]
+  /** Attacks aimed at you that you can still respond to. */
+  incoming: AttackView[]
+  /** Your attacks still waiting for a response. */
+  outgoing: AttackView[]
+  /** Spend `ammo` to attack a player. Throws if you lack the ammo or the player is unknown. */
+  attack: (to: string, ammo: number) => Promise<void>
+  /** Respond to an attack with `ammo` (0 = take it). Resolves it immediately. */
+  defend: (attackId: string, ammo: number) => Promise<void>
+}
+
+export function useCombat(): Combat {
+  const { net, engine } = useGame()
+  const now = useNow(500)
+  const view = (a: Attack): AttackView => ({
+    ...a,
+    secondsLeft: Math.max(0, Math.ceil((a.expiresAt - (now + net.clockSkew)) / 1000)),
+    requiredDefense: requiredDefense(a.ammo),
+  })
+  return {
+    players: net.players,
+    incoming: net.incomingAttacks.map(view),
+    outgoing: net.outgoingAttacks.map(view),
+    attack: async (to, ammo) => void (await engine.attack(to, ammo)),
+    defend: async (id, ammo) => void (await engine.defend(id, ammo)),
   }
 }
 
