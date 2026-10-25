@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { ATTACK_ARRIVAL_TIME, useCombat, useResources } from '@/game'
 import { useAttempt } from '@/components/trading/util'
+import { Badge, Meter, Panel } from '@/FancyComp/parts'
 import { CombatPreview } from './CombatPreview'
 
 /** The /combat page: attack another player with ammo, and respond to attacks on you. */
@@ -13,31 +13,40 @@ export default function Combat() {
   const [message, attempt] = useAttempt()
 
   return (
-    <div style={{ padding: '1rem', fontFamily: 'monospace' }}>
-      <p><Link to="/trade">← Dashboard</Link></p>
-      <h1>Combat</h1>
-      <p>Health: {Math.round(health)} | Ammo: {Math.floor(ammo)}</p>
+    <>
+      <Panel title="COMBAT STATUS">
+        <div className="rc-row" style={{ display: 'block' }}>
+          <span>HEALTH: {Math.round(health)}</span>
+          <Meter value={health} max={100} />
+        </div>
+        <div className="rc-row"><span>AMMO</span>{Math.floor(ammo)}</div>
+      </Panel>
 
-      <hr />
-      <h2>Attack a player</h2>
-      <p>
-        Player: <input list="combat-players" size={14} value={to} onChange={(e) => setTo(e.target.value)} />
-        <datalist id="combat-players">{players.map((p) => <option key={p} value={p} />)}</datalist>{' '}
-        Ammo: <input type="number" min="1" step="1" size={5} value={amount} onChange={(e) => setAmount(e.target.value)} />{' '}
-        <button onClick={() => attempt(() => attack(to, Number(amount)), `Attack sent. They have ${ATTACK_ARRIVAL_TIME}s to respond.`)}>Attack</button>
-      </p>
-      {message && <p>{message}</p>}
+      <Panel title="ATTACK A PLAYER">
+        <div className="rc-form">
+          <label>TARGET PLAYER
+            <input list="combat-players" value={to} onChange={(e) => setTo(e.target.value)} />
+            <datalist id="combat-players">{players.map((p) => <option key={p} value={p} />)}</datalist>
+          </label>
+          <label>AMMO
+            <input type="number" min="1" step="1" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          </label>
+          <button className="danger" onClick={() => attempt(() => attack(to, Number(amount)), `Attack sent. They have ${ATTACK_ARRIVAL_TIME}s to respond.`)}>ATTACK ▶</button>
+        </div>
+        {message && <p className="rc-muted" style={{ marginTop: 10 }}>{message}</p>}
+      </Panel>
 
-      <h3>Your attacks awaiting a response</h3>
-      {outgoing.length === 0 && <p>None.</p>}
-      <ul>
+      <Panel title="ATTACKS AWAITING RESPONSE" right={`${outgoing.length} ACTIVE`}>
+        {outgoing.length === 0 && <p className="rc-muted">None.</p>}
         {outgoing.map((a) => (
-          <li key={a.id}>To {a.toName}: {a.ammo} ammo - {a.secondsLeft}s left</li>
+          <div className="rc-row" key={a.id}>
+            <span>TO {a.toName}: {a.ammo} ammo</span>
+            <Badge kind="warn">{a.secondsLeft}s LEFT</Badge>
+          </div>
         ))}
-      </ul>
+      </Panel>
 
-      <hr />
       <CombatPreview />
-    </div>
+    </>
   )
 }
