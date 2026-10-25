@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useGame } from '@/game/GameProvider'
 import { fmt } from '@/components/trading/format'
 import { Badge } from '@/FancyComp/parts'
@@ -9,7 +9,7 @@ import {
   SCENARIO_TIMEOUT_HEALTH_PENALTY,
   useScenario,
 } from '@/context/ActiveScenarioContext'
-import type { Effects } from '@/context/ActiveScenarioContext'
+import type { Effects, Scenario } from '@/context/ActiveScenarioContext'
 
 export {
   SCENARIO_COOLDOWN_SECONDS,
@@ -52,198 +52,13 @@ export function ScenarioPanel({ onNewScenario }: { onNewScenario?: (scenario: Sc
 
   const [text, setText] = useState('')
   const [miss, setMiss] = useState(false)
-  const [aiOutcome, setAiOutcome] = useState<string | null>(null)
-  const [isGeneratingOutcome, setIsGeneratingOutcome] = useState(false)
-  const [autoRead, setAutoRead] = useState(false)
-  const [countdown, setCountdown] = useState<number | null>(null)
 
-  const sc = useMemo(() => scenarios.find((s) => s.id === id) ?? scenarios[0], [id])
-
-  const lastReadIdRef = useRef<number | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  const clearTimers = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current)
-      timerRef.current = null
-    }
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
-    }
-  }, [])
-
-  // Clear timers on unmount
+  // Announce every scenario that comes up (including the first one).
+  const onNewScenarioRef = useRef(onNewScenario)
+  onNewScenarioRef.current = onNewScenario
   useEffect(() => {
-    return () => {
-      clearTimers()
-      abortRef.current?.abort()
-    }
-  }, [clearTimers])
-
-  // Auto-read scenario via C.O.R.A. if enabled
-  useEffect(() => {
-    if (!sc || !autoRead) return
-    if (lastReadIdRef.current === sc.id) return
-    lastReadIdRef.current = sc.id
-
-    const speechText = getScenarioSpokenText(sc)
-    speak(speechText).catch((err) => {
-      console.warn('Auto-read paused until user interaction:', err)
-    })
-  }, [sc, autoRead, speak])
-
-  const nextRandomScenario = useCallback(() => {
-    clearTimers()
-    setCountdown(null)
-    if (scenarios.length === 0) return
-    stop()
-    abortRef.current?.abort()
-    abortRef.current = null
-
-    setId((currId) => {
-      if (scenarios.length <= 1) return scenarios[0].id
-      let next = scenarios[Math.floor(Math.random() * scenarios.length)].id
-      while (next === currId) {
-        next = scenarios[Math.floor(Math.random() * scenarios.length)].id
-      }
-      return next
-    })
-    setChosen(null)
-    setAiOutcome(null)
-    setIsGeneratingOutcome(false)
-    setText('')
-    setMiss(false)
-  }, [clearTimers, stop])
-
-  const startNextScenarioCountdown = useCallback(() => {
-    clearTimers()
-    setCountdown(15)
-
-    intervalRef.current = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev === null || prev <= 1) {
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current)
-            intervalRef.current = null
-          }
-          return null
-        }
-        return prev - 1
-      })
-    }, 1000)
-
-    timerRef.current = setTimeout(() => {
-      nextRandomScenario()
-    }, 15000)
-  }, [clearTimers, nextRandomScenario])
-
-  const applyEffect = (resourceKey: 'biomass' | 'ammo' | 'oxygen' | 'health', delta: number) => {
-    if (delta > 0) {
-      addResource(resourceKey, delta)
-    } else if (delta < 0) {
-      removeResource(resourceKey, Math.abs(delta))
-    }
-  }
-
-  const executeOption = async (opt: Option) => {
-    if (isGeneratingOutcome || countdown !== null) return
-    stop()
-    setChosen(opt)
-    setMiss(false)
-    setText('')
-
-    const changes: string[] = []
-    if (opt.effects) {
-      if (opt.effects.food) {
-        applyEffect('biomass', opt.effects.food)
-        changes.push(
-          `${Math.abs(opt.effects.food)} biomass ${opt.effects.food > 0 ? 'gained' : 'consumed'}`,
-        )
-      }
-      if (opt.effects.ammunition) {
-        applyEffect('ammo', opt.effects.ammunition)
-        changes.push(
-          `${Math.abs(opt.effects.ammunition)} ammo ${opt.effects.ammunition > 0 ? 'gained' : 'spent'}`,
-        )
-      }
-      if (opt.effects.oxygen) {
-        applyEffect('oxygen', opt.effects.oxygen)
-        changes.push(
-          `${Math.abs(opt.effects.oxygen)} oxygen ${opt.effects.oxygen > 0 ? 'gained' : 'vented'}`,
-        )
-      }
-      if (opt.effects.base_health_pct) {
-        applyEffect('health', opt.effects.base_health_pct)
-        changes.push(
-          `${Math.abs(opt.effects.base_health_pct)}% base integrity ${
-            opt.effects.base_health_pct > 0 ? 'restored' : 'lost'
-          }`,
-        )
-      }
-    }
-
-    setAiOutcome('')
-    setIsGeneratingOutcome(true)
-
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
-
-    let narrative = ''
-    try {
-      const prompt = buildScenarioPrompt(sc, opt, changes)
-      const timeoutId = setTimeout(() => controller.abort(), 8000)
-
-      try {
-        narrative = await streamGenerate(
-          prompt,
-          (_chunk, accumulated) => {
-            if (!controller.signal.aborted) {
-              setAiOutcome(accumulated)
-            }
-          },
-          { signal: controller.signal },
-        )
-      } finally {
-        clearTimeout(timeoutId)
-      }
-
-      const cleaned = cleanNarrative(narrative)
-      if (cleaned && cleaned.length > 15) {
-        narrative = cleaned
-        setAiOutcome(cleaned)
-      } else {
-        throw new Error('Response too short or malformed')
-      }
-    } catch (err) {
-      if (controller.signal.aborted && abortRef.current !== controller) {
-        return
-      }
-
-      console.warn('AI narrative streaming failed or timed out, applying typewriter fallback:', err)
-      narrative = getFallbackNarrative(sc, opt, changes)
-      await streamTextSmoothly(narrative, (current) => {
-        if (!controller.signal.aborted) {
-          setAiOutcome(current)
-        }
-      })
-    } finally {
-      if (abortRef.current === controller) {
-        setIsGeneratingOutcome(false)
-      }
-    }
-
-    if (autoRead && narrative && !controller.signal.aborted) {
-      speak(narrative).catch(() => {})
-    }
-
-    if (!controller.signal.aborted) {
-      startNextScenarioCountdown()
-    }
-  }
+    onNewScenarioRef.current?.(scenario)
+  }, [scenario])
 
   const submit = () => {
     if (isGeneratingOutcome || countdown !== null || responseCountdown === 0) return
