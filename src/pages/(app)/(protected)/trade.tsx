@@ -10,6 +10,7 @@ import { PLAYER_TRADABLE_KEYS, DEPLETING_KEYS } from '@/game/state'
 import { RESOURCE_KEYS } from '@/shared/types'
 import { tradeLegs } from '@/shared/trade-book'
 import { fmt, LABELS, seconds } from '@/components/trading/format'
+import { AIPanel } from '@/components/aiLogicAndVisual/AiPanel'
 
 export default function DashboardPage() {
   const { state, net } = useGame()
@@ -99,8 +100,7 @@ export default function DashboardPage() {
       </pre>
 
       <hr />
-      <h2>AI Assistant</h2>
-      <p><Link to="/trades#voice">Voice Assistant</Link> — speak your resource status or custom text.</p>
+    <AIPanel />
     </div>
   )
 }
