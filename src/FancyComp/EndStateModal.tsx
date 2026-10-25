@@ -42,7 +42,7 @@ export function EndStateModal() {
       >
         <div className="rc-titlebar">
           <div className="t">
-            <small>{isVictory ? 'robco_mission.exe_' : 'robco_emergency.exe_'}</small>
+            <small>{isVictory ? 'goopcorp_mission.exe_' : 'goopcorp_emergency.exe_'}</small>
             <b style={{ color: isVictory ? 'var(--hi)' : '#ff4d4d' }}>
               {isVictory
                 ? `MISSION VICTORY // ${VICTORY_DAY_THRESHOLD}-DAY SIMULATION COMPLETE`

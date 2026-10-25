@@ -24,7 +24,7 @@
 
 ### What did you build? What problem does it solve?
 
-Space colony management games often isolate players from realistic economic friction and dynamic narrative consequences. **Life in Space** bridges real-time resource survival with collaborative multiplayer commerce inside an authentic RobCo retro CRT terminal operating system.
+Space colony management games often isolate players from realistic economic friction and dynamic narrative consequences. **Life in Space** bridges real-time resource survival with collaborative multiplayer commerce inside an authentic GoopCorp CRT terminal operating system.
 
 As station commander, you must:
 - **Balance Vital Life-Support Systems**: Oxygen and biomass continuously deplete. When both reserves remain healthy (above 50 units), station base health steadily regenerates (+1% every 5 seconds). If base hull integrity collapses to 0%, the colony is defeated.
@@ -38,9 +38,9 @@ As station commander, you must:
 
 - **DeepSpace Platform & SDK**: Real-time edge deployment, multiplayer state arbitration via Cloudflare Workers Durable Objects, and user authentication.
 - **ElevenLabs Voice API**: Synthesizes real-time text-to-speech audio reports for incoming crisis alerts and colony status updates.
-- **Claude Haiku 5.5**: Used for AI assistant C.O.R.A.'s text based responses and simulation narrative writing.
+- **Claude Haiku 5.5**: Used for AI assistant C.O.R.A.'s text based responses and simulation narrative writing. Accessed through DeepSpace's API.
 - **Boilerplate & Template Attribution**: Core scaffolding originated from the DeepSpace full-stack starter template.
-- **AI Generated / Assisted Code**: Terminal CRT aesthetics (`robco.css`), state-machine transitions, and Vitest test suites were authored with AI pair-programming assistance.
+- **AI Generated / Assisted Code**: We used Claude, Gemini, and Junie to assist with development. AI was used throughout the project to help with implementation.
 
 ## Prerequisites
 

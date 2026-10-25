@@ -68,52 +68,6 @@ return (
         </div>
       </Panel>
 
-      <Panel title="STATION TIME & DAY CONTROLS" right={<Badge kind="out">DAY {dayTime.day}</Badge>}>
-        <div className="rc-row">
-          <span>CURRENT CLOCK</span>
-          <span>{dayTime.timeStringFull} ({dayTime.phase})</span>
-        </div>
-        <div className="rc-row">
-          <span>CYCLE PROGRESS</span>
-          <span>{dayTime.progressPercent}% ({Math.round(dayTime.secondsLeftInDay)}s remaining)</span>
-        </div>
-        <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
-          <button onClick={() => dayTime.advanceDay()}>ADVANCE TO NEXT DAY (+120S) ▶</button>
-          <button onClick={() => dayTime.setDay(30)}>TEST VICTORY (DAY 30) ★</button>
-          <button className="danger" onClick={() => removeResource('health', 100)}>TEST DEFEAT (0% HEALTH) ☠</button>
-          <button className="ghost" onClick={() => dayTime.setTime(0)}>RESET CLOCK TO DAY 1</button>
-        </div>
-        <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-          <button
-            className="danger"
-            onClick={() => store.update((s) => ({ ...s, resources: { ...s.resources, oxygen: 0 } }))}
-          >
-            SET OXYGEN TO 0 (-1.0%/s HP) ☠
-          </button>
-          <button
-            className="danger"
-            onClick={() => store.update((s) => ({ ...s, resources: { ...s.resources, biomass: 0 } }))}
-          >
-            SET BIOMASS TO 0 (-0.5%/s HP) ☠
-          </button>
-          <button
-            className="danger"
-            onClick={() => store.update((s) => ({ ...s, resources: { ...s.resources, oxygen: 0, biomass: 0 } }))}
-          >
-            SET BOTH TO 0 (-1.5%/s HP) ☠
-          </button>
-          <button
-            onClick={() =>
-              store.update((s) => ({
-                ...s,
-                resources: { ...s.resources, oxygen: 100, biomass: 100, health: 100 },
-              }))
-            }
-          >
-            RESTORE LIFE SUPPORT (100) ✦
-          </button>
-        </div>
-      </Panel>
 
       <Panel title="VISUAL & CRT CONTROLS">
         <label className="rc-row"><span>Scanlines &amp; screen overlay</span><input type="checkbox" checked={prefs.scanlines} onChange={(e) => setPrefs({ scanlines: e.target.checked })} /></label>

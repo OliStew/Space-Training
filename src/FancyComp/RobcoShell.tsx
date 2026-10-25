@@ -112,7 +112,7 @@ export default function RobcoShell() {
   return (
     <TerminalFrame>
       <header className="rc-ticker">
-        <div className="rc-brand"><i /><span>ROBCO UOS v2.0</span></div>
+        <div className="rc-brand"><i /><span>GOOPCORP UOS v2.0</span></div>
         <div className="rc-track"><div className="rc-run">{group('a')}{group('b')}</div></div>
         <div className="rc-ticker-end">
           <Badge kind="out">DAY {dayTime.day}</Badge>
@@ -149,7 +149,7 @@ export default function RobcoShell() {
 
         <section className="rc-win rc-win-main" ref={winRef}>
           <div className="rc-titlebar">
-            <div className="t"><small>robco.exe_</small><b>{NAV[active]?.title ?? 'ROBCO TERMINAL'}</b></div>
+            <div className="t"><small>goopcorp.exe_</small><b>{NAV[active]?.title ?? 'GOOPCORP TERMINAL'}</b></div>
             <span className="rc-muted" style={{ marginRight: 12 }}>● CONNECTED</span>
           </div>
           <div className="rc-body" key={pathname}><Outlet context={{ setScenarioSlot } satisfies ShellContext} /></div>
