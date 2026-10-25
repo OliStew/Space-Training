@@ -73,14 +73,18 @@ STRICT ACTION ALLOWLIST:
 You can ONLY choose actions from this list: ${JSON.stringify(REGULAR_ACTIONS)}`
 const TRADE_ADVISOR = `
 7. ACTIVE TRADE LOGIC:
-    - The user is currently in the trade module.
-    - The user can choose to buy or sell their supplies to Aliens that propose trades. 
+    - The user is currently in the markets and trading module.
+    - The user can buy or sell supplies at station markets and review offers from other players.
     - Resources can be exchanged for money or money for resources.
     - Resources CANNOT be exchanged for other resources.
     - ONLY these ressouces can be exchanged: OXYGEN, AMMO, SPACE GOOP, SPACE BUCKS. No other resource can be exchanged.
-    - Evaluate the offered items versus what you are giving up. 
+    - Use MARKET DATA to compare current station buy and sell prices. Use ACTIVE TRADE OFFERS to evaluate player requests when present.
+    - Evaluate what is offered versus what the colony gives up.
     - Only recommend ACCEPT_TRADE if it addresses critical shortages or provides exceptional economic value without bankrupting the colony. Otherwise, recommend REJECT_TRADE.
-8. NO-ISSUE STATE: If all resources are safely above their danger lines, set the action to 'NONE'. Do not invent problems when everything is fine.
+9. PREVIOUS TRADES:
+    -Take in account recent trades and compare prices to find the best deal.
+    -Recent trades are NOT necessarily currently available trades. 
+10. NO-ISSUE STATE: If all resources are safely above their danger lines, set the action to 'NONE'. Do not invent problems when everything is fine.
 STRICT ACTION ALLOWLIST:
 You can ONLY choose actions from this list: ${JSON.stringify(TRADE_ACTIONS)}`
 const EVENT_ADVISOR = `
@@ -150,13 +154,14 @@ export function buildColonyPrompt(
   tradeOffer?: any,
   incomingEvent?: any,
   marketSnapshot?: MarketsSnapshot,
-  tradeHistory?: Trade[]
+  tradeHistory?: Trade[],
+  isMarketPage = false,
 ): string {
   let selectedModeAdvisor = REGULAR_ADVISOR;
   let moreContext = "";
 
   // Add market data context
-  if (marketSnapshot && marketSnapshot.markets.length > 0) {
+  if (marketSnapshot && marketSnapshot.markets.length > 0 && !incomingEvent) {
     const marketInfo = marketSnapshot.markets.map(m => ({
       name: m.name,
       prices: m.prices
@@ -164,8 +169,8 @@ export function buildColonyPrompt(
     moreContext += `\n[MARKET DATA]\nCurrent market prices: ${JSON.stringify(marketInfo)}`;
   }
 
-  // Add trade history context
-  if (tradeHistory && tradeHistory.length > 0) {
+  
+  if (tradeHistory && tradeHistory.length > 0 && !tradeOffer) {
     const recentTrades = tradeHistory.slice(-10).map(t => ({
       id: t.id,
       from: t.fromName,
@@ -183,9 +188,11 @@ export function buildColonyPrompt(
   if (incomingEvent) {
     selectedModeAdvisor = EVENT_ADVISOR;
     moreContext += `\n[INCOMING EVENT]\nEvent Details: ${JSON.stringify(incomingEvent)}`;
-  } else if (tradeOffer) {
+  } else if (isMarketPage || tradeOffer) {
     selectedModeAdvisor = TRADE_ADVISOR;
-    moreContext += `\n[ACTIVE TRADE OFFERS]\nTrade Details: ${JSON.stringify(tradeOffer)}`;
+    if (tradeOffer) {
+      moreContext += `\n[ACTIVE TRADE OFFERS]\nTrade Details: ${JSON.stringify(tradeOffer)}`;
+    }
   }
 
   return `${BASE_ADVISOR}\n${selectedModeAdvisor}\n\n[COLONY STATUS]\nResources: ${JSON.stringify(resources)}${moreContext}\nPlayer Message: "${userMessage}"`;
