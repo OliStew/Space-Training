@@ -5,6 +5,7 @@ import { useTextToSpeech } from '@/lib/tts'
 import { streamGenerate, streamTextSmoothly } from '@/lib/generate'
 import { fmt } from '@/components/trading/format'
 import { Badge } from '@/FancyComp/parts'
+import { useActiveScenario } from '@/context/ActiveScenarioContext'
 import data from '@/lib/scenarios.json'
 
 type Effects = { food: number; ammunition: number; oxygen: number; base_health_pct: number }
@@ -117,6 +118,7 @@ export function ScenarioPanel() {
   const { state } = useGame()
   const { add: addResource, remove: removeResource } = useDebugResources()
   const { speak, stop, isPlaying, isLoading: isVoiceLoading, error: ttsError } = useTextToSpeech()
+  const { setScenario: setActiveScenario } = useActiveScenario()
 
   // Random initial scenario selection
   const [id, setId] = useState<number>(() => {
@@ -131,6 +133,12 @@ export function ScenarioPanel() {
   const [countdown, setCountdown] = useState<number | null>(null)
 
   const sc = useMemo(() => scenarios.find((s) => s.id === id) ?? scenarios[0], [id])
+
+  useEffect(() => {
+    setActiveScenario(sc)
+  }, [sc, setActiveScenario])
+
+  useEffect(() => () => setActiveScenario(null), [setActiveScenario])
 
   const lastReadIdRef = useRef<number | null>(null)
   const abortRef = useRef<AbortController | null>(null)
