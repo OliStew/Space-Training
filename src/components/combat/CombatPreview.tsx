@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useCombat, useResources } from '@/game'
 import { combatDamage } from '@/shared/combat'
 import { useAttempt } from '@/components/trading/util'
+import { Badge, Panel } from '@/FancyComp/parts'
 
 /** Send the automatic response this long before the window closes, so it reaches the server in time. */
 const AUTO_RESPOND_LEAD_MS = 1500
@@ -29,31 +30,32 @@ export function CombatPreview() {
   })
 
   return (
-    <section>
-      <h2>Attacks on you</h2>
-      {message && <p>{message}</p>}
-      {incoming.length === 0 && <p>None.</p>}
-      <ul>
-        {incoming.map((a) => {
-          const value = chosen[a.id] ?? a.requiredDefense
-          const loss = combatDamage(a.ammo, value)
-          return (
-            <li key={a.id}>
-              <span style={{ color: 'red' }}>
-                {a.fromName} attacked you with {a.ammo} ammo - <strong>{a.secondsLeft}s</strong> left to respond.
-              </span>{' '}
-              Defend with {a.requiredDefense} ammo to take no harm.
-              <div style={{ marginTop: '0.75rem' }}>
+    <Panel title="ATTACKS ON YOU" right={incoming.length ? <Badge kind="crit">{incoming.length} INCOMING</Badge> : '0 INCOMING'}>
+      {message && <p className="rc-muted">{message}</p>}
+      {incoming.length === 0 && <p className="rc-muted">None.</p>}
+      {incoming.map((a) => {
+        const value = chosen[a.id] ?? a.requiredDefense
+        const loss = combatDamage(a.ammo, value)
+        return (
+          <div className="rc-row" key={a.id} style={{ display: 'block', padding: '10px 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ color: '#ff4d4d' }}>{a.fromName} attacked you with {a.ammo} ammo</span>
+              <Badge kind="crit">{a.secondsLeft}s LEFT</Badge>
+            </div>
+            <p className="rc-muted" style={{ margin: '4px 0 8px' }}>Defend with {a.requiredDefense} ammo to take no harm.</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <input
                 type="range"
                 min={0}
                 max={a.requiredDefense}
                 step={1}
                 value={value}
+                style={{ flex: 1, minWidth: 140 }}
                 onChange={(e) => setChosen({ ...chosen, [a.id]: Number(e.target.value) })}
-              />{' '}
-              {value} / {a.requiredDefense} ammo{' '}
+              />
+              <span>{value} / {a.requiredDefense} AMMO</span>
               <button
+                className="danger"
                 onClick={() =>
                   attempt(async () => {
                     if (value > owned) throw new Error(`Not enough ammo: you chose ${value} but have ${owned}`)
@@ -61,14 +63,13 @@ export function CombatPreview() {
                   }, 'Response sent')
                 }
               >
-                Respond (lose {loss} health)
+                RESPOND (-{loss} HP)
               </button>
-              {value > owned && <> Not enough ammo: you have {owned}.</>}
-              </div>
-            </li>
-          )
-        })}
-      </ul>
-    </section>
+            </div>
+            {value > owned && <p style={{ color: '#ffb000', margin: '6px 0 0' }}>Not enough ammo: you have {owned}.</p>}
+          </div>
+        )
+      })}
+    </Panel>
   )
 }

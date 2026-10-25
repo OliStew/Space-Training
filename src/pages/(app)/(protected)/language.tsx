@@ -1,5 +1,5 @@
-import { Language } from '@/components/trading/Language'
 import { Link } from 'react-router-dom'
+import { Language } from '@/components/trading/Language'
 import { Panel } from '@/FancyComp/parts'
 
 export default function LanguagePage() {
