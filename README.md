@@ -32,6 +32,7 @@ As station commander, you must:
 - **Navigate Orbital Commodity Markets**: Trade metal, ammunition, biomass, and oxygen across dynamic markets governed by Cloudflare Workers Durable Objects. Deliveries face simulated orbital transit delays, price slippage, and escrow holds.
 - **Command Emergency Crisis Scenarios**: Deep space events force commanders into rapid choices under a 15-second cooldown, impacting critical station health and supplies.
 - **Decode Extraterrestrial Dialects**: An interactive linguistic mini-game allows operators to decrypt alien signals encountered in deep space.
+- **Fight Rival Commanders**: Spend ammunition to attack other commanders, who have 30 seconds to answer with their own ammo or take heavy health damage.
 
 ### External Tools, APIs & Attribution
 
@@ -73,7 +74,7 @@ Once running, navigate to `http://localhost:5173` in your browser.
 ### Helpful Commands
 
 ```sh
-# Run unit test suite (Day/Time system, end states, health regen, trade book)
+# Run unit test suite (Day/Time system, end states, health regen, trade book, combat)
 npm run test:unit
 
 # Run TypeScript type verification
