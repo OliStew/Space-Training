@@ -9,6 +9,8 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default: "bg-white text-[#1b1b3a]",
+         secondary: "bg-secondary text-secondary-foreground",
+  destructive: "bg-destructive/10 text-destructive",
         blue: "bg-[#8ed1fc] text-[#1b1b3a]",
         pink: "bg-[#ff8fcf] text-[#1b1b3a]",
         lilac: "bg-[#b69cff] text-[#1b1b3a]",
