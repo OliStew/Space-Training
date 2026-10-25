@@ -12,6 +12,9 @@ import { fmt, LABELS, seconds } from '@/components/trading/format'
 import { Badge, Panel } from '@/FancyComp/parts'
 import { ResourceTiles } from '@/FancyComp/ResourceTiles'
 import { depletionRows, sumResources } from '@/FancyComp/sim'
+import { RESOURCE_KEYS } from '@/shared/types'
+import { AIPanel } from '@/components/aiLogicAndVisual/AiPanel'
+
 
 export default function DashboardPage() {
   const { state, net } = useGame()
@@ -86,10 +89,10 @@ export default function DashboardPage() {
       </pre>
 
       <hr />
-    <AIPanel />
-        <hr />
-        <h2><Link to="/language">Alien Language Game</Link></h2>
-    </div>
+      <AIPanel />
+      <hr />
+      <h2><Link to="/language">Alien Language Game</Link></h2>
+
       <Panel title="SIMULATION" right={<Link to="/simulation">DETAILS ▶</Link>}>
         {depletionRows(state).map((d) => (
           <div className="rc-row" key={d.key}>
