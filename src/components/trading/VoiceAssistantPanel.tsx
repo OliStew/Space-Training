@@ -2,20 +2,28 @@ import { useState } from 'react'
 import { Button } from '@/components/ui'
 import { useTextToSpeech } from '@/lib/tts'
 import { Volume2, VolumeX, Loader2 } from 'lucide-react'
-import { useGame } from '@/game/GameProvider'
-import { fmt } from './format'
+import { useDebugResources, useGameTime, useResources } from '@/game'
+import { fmt } from './util'
 
 export function VoiceAssistantPanel() {
-  const { state } = useGame()
+  // Read: resources.money, resources.metal, ... (also biomass, oxygen, ammo, buildings)
+
+    const resources = useResources()
+
+    // Write: addResource('money', 100) / removeResource('biomass', 50) (stops at zero). Not used yet.
+  const { add: addResource, remove: removeResource } = useDebugResources()
+  void addResource, removeResource
+  // Shared game clock, in seconds since the game began (same value every panel sees). Not used yet.
+  const { seconds: gameTime } = useGameTime()
+  void gameTime
   const { speak, stop, isPlaying, isLoading, error: ttsError } = useTextToSpeech()
   const [customText, setCustomText] = useState('')
 
   const handleSpeakStatus = () => {
     const defaultStatus =
-      `Current resource report: You have $${fmt(state.resources.money)} credits, ` +
-      `${fmt(state.resources.biomass, 1)} biomass, ${fmt(state.resources.oxygen, 1)} oxygen, ` +
-      `${fmt(state.resources.metal, 1)} metal, ${fmt(state.resources.ammo, 1)} ammo, and ` +
-      `${fmt(state.resources.buildings, 1)} buildings.`
+      `Current resource report: You have $${fmt(resources.money)} credits, ` +
+      `${fmt(resources.biomass, 1)} biomass, ${fmt(resources.oxygen, 1)} oxygen, ` +
+      `${fmt(resources.health, 1)} health, and ${fmt(resources.ammo, 1)} ammo.`
     const textToSpeak = customText.trim() || defaultStatus
     speak(textToSpeak).catch(() => {})
   }

@@ -16,42 +16,39 @@
 import { useState } from 'react'
 import { Link, Outlet } from 'react-router-dom'
 import { AuthGate, AuthOverlay } from 'deepspace'
-import { Button } from '@/components/ui'
+// import { Button } from '@/components/ui'
 import { GameProvider } from '@/game/GameProvider'
+import RobcoShell from '@/FancyComp/RobcoShell'
+import { TerminalFrame } from '@/FancyComp/parts'
 
 export default function ProtectedLayout() {
   return (
     <AuthGate fallback={<SignedOutPanel />}>
-      {/* Per-player game state and market/trade polling for every gated page. */}
       <GameProvider>
-        <Outlet />
+        <RobcoShell />
       </GameProvider>
     </AuthGate>
   )
 }
 
 function SignedOutPanel() {
-  const [showAuthModal, setShowAuthModal] = useState(false)
-
+  const [open, setOpen] = useState(false)
   return (
-    <div className="flex min-h-[60vh] items-center justify-center px-6 py-20">
-      <div className="w-full max-w-sm rounded-lg border border-border bg-card p-8 text-center">
-        <h1 className="text-lg font-semibold text-foreground">Sign in to continue</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          This page is only available to signed-in users.
-        </p>
-        <Button className="mt-6 w-full" onClick={() => setShowAuthModal(true)}>
-          Sign in
-        </Button>
-        <Link
-          to="/"
-          className="mt-4 inline-block text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-        >
-          Back to home
-        </Link>
+    <TerminalFrame>
+      <div className="rc-center">
+        <div className="rc-win">
+          <div className="rc-titlebar"><div className="t"><small>robco.exe_</small><b>ACCESS RESTRICTED</b></div></div>
+          <div style={{ padding: 24 }}>
+            <h1>AUTHENTICATION REQUIRED</h1>
+            <p className="rc-muted">This terminal is only available to signed-in operators.</p>
+            <p style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 18 }}>
+              <button onClick={() => setOpen(true)}>SIGN IN ▶</button>
+              <Link to="/">Back to home</Link>
+            </p>
+          </div>
+        </div>
       </div>
-
-      {showAuthModal && <AuthOverlay onClose={() => setShowAuthModal(false)} />}
-    </div>
+      {open && <AuthOverlay onClose={() => setOpen(false)} />}
+    </TerminalFrame>
   )
 }

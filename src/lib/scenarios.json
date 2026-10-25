@@ -1,0 +1,404 @@
+{
+  "scenarios": [
+    {
+      "id": 1,
+      "name": "Goop Mutiny",
+      "description": "The latest batch of Space Goop had severe quality issues, leading to anger among the colonists and talk of revolt.",
+      "options": [
+        {
+          "key": "A",
+          "action_id": "DISTRIBUTE_GOOP",
+          "label": "Release new Goop",
+          "intent_category": "appeasement",
+          "trigger_keywords": [
+            "release", "new goop", "feed", "rations", "give food", "distribute", 
+            "cook", "fresh batch", "share goop", "provide food", "pacify"
+          ],
+          "effects": { "food": -10, "ammunition": 0, "oxygen": 0, "base_health_pct": 0 }
+        },
+        {
+          "key": "B",
+          "action_id": "ENFORCE_CURFEW",
+          "intent_category": "suppression",
+          "label": "Enforce Curfew",
+          "trigger_keywords": [
+            "curfew", "enforce", "patrol", "lockdown", "guards", "martial law", 
+            "quell", "crackdown", "restrict", "contain", "force"
+          ],
+          "effects": { "food": 0, "ammunition": -5, "oxygen": 0, "base_health_pct": -5 }
+        },
+        {
+          "key": "C",
+          "action_id": "IGNORE_MUTINY",
+          "intent_category": "inaction",
+          "label": "Do Nothing",
+          "trigger_keywords": [
+            "nothing", "ignore", "wait", "let them", "do nothing", "pass", 
+            "stand down", "idle", "leave it"
+          ],
+          "effects": { "food": 0, "ammunition": 0, "oxygen": 0, "base_health_pct": -15 }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Abandoned Alien Ship",
+      "description": "An alien ship drifts above the base with the word \"κΛνπ\" written on its hull.",
+      "options": [
+        {
+          "key": "A",
+          "action_id": "BOARD_VESSEL",
+          "intent_category": "expedition",
+          "label": "Send a strike team",
+          "trigger_keywords": [
+            "strike team", "board", "breach", "send team", "infiltrate", 
+            "scavenge", "marines", "raid", "explore ship", "attack ship"
+          ],
+          "effects": { "food": 0, "ammunition": -5, "oxygen": 0, "base_health_pct": 0 }
+        },
+        {
+          "key": "B",
+          "action_id": "HAIL_VESSEL",
+          "intent_category": "communication",
+          "label": "Hail the vessel",
+          "trigger_keywords": [
+            "hail", "radio", "contact", "message", "transmit", "communicate", 
+            "broadcast", "ping", "call", "translate"
+          ],
+          "effects": { "food": 0, "ammunition": 0, "oxygen": 0, "base_health_pct": 0 }
+        },
+        {
+          "key": "C",
+          "action_id": "IGNORE_VESSEL",
+          "intent_category": "inaction",
+          "label": "Let it fly by",
+          "trigger_keywords": [
+            "let fly", "ignore", "pass", "leave it", "drift", "do nothing", 
+            "watch", "avoid", "stand by"
+          ],
+          "effects": { "food": 0, "ammunition": 0, "oxygen": 0, "base_health_pct": 0 }
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Asteroid Flyby",
+      "description": "An asteroid is flying by your base, but one of your engineers accidentally spilled water on the terminal for the Disaster Preparedness Models and you're now unsure if the asteroid will strike the base.",
+      "options": [
+        {
+          "key": "A",
+          "action_id": "DESTROY_ASTEROID",
+          "intent_category": "destruction",
+          "label": "Blow it out the sky!",
+          "trigger_keywords": [
+            "blow up", "shoot", "destroy", "missile", "railgun", "fire", 
+            "vaporize", "blast", "nuke", "intercept", "cannon"
+          ],
+          "effects": { "food": 0, "ammunition": -10, "oxygen": 0, "base_health_pct": 0 }
+        },
+        {
+          "key": "B",
+          "action_id": "DEFLECT_ASTEROID",
+          "intent_category": "deflection",
+          "label": "Try to knock it out the way",
+          "trigger_keywords": [
+            "knock", "deflect", "nudge", "steer", "push", "graze", 
+            "redirect", "partial shot", "divert"
+          ],
+          "effects": { "food": 0, "ammunition": -3, "oxygen": 0, "base_health_pct": 0 }
+        },
+        {
+          "key": "C",
+          "action_id": "IGNORE_ASTEROID",
+          "intent_category": "inaction",
+          "label": "Let it fly by",
+          "trigger_keywords": [
+            "let fly", "gamble", "ignore", "do nothing", "chance it", 
+            "wait", "hope", "save ammo", "pass"
+          ],
+          "effects": { "food": 0, "ammunition": 0, "oxygen": 0, "base_health_pct": 0 }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Water Borne Organism",
+      "description": "An ice cap recently thawed by terraforming has released a water borne illness onto the base! People are starting to become ill, but there's a possibility this will all blow over, right?",
+      "options": [
+        {
+          "key": "A",
+          "action_id": "QUARANTINE_BASE",
+          "intent_category": "isolation",
+          "label": "Quarantine",
+          "trigger_keywords": [
+            "quarantine", "isolate", "lock down", "contain", "medical bay", 
+            "separate", "restrict food", "ration goop"
+          ],
+          "effects": { "food": -10, "ammunition": 0, "oxygen": 0, "base_health_pct": -5 }
+        },
+        {
+          "key": "B",
+          "action_id": "VENT_ATMOSPHERE",
+          "intent_category": "sterilization",
+          "label": "Choke it out",
+          "trigger_keywords": [
+            "choke", "purge air", "vent", "suffocate", "drain oxygen", 
+            "gas out", "sterilize", "hypoxia", "dump air"
+          ],
+          "effects": { "food": 0, "ammunition": 0, "oxygen": -10, "base_health_pct": -10 }
+        },
+        {
+          "key": "C",
+          "action_id": "IGNORE_ILLNESS",
+          "intent_category": "inaction",
+          "label": "Who cares?",
+          "trigger_keywords": [
+            "who cares", "ignore", "blow over", "nothing", "do nothing", 
+            "leave them", "natural immunity", "pass"
+          ],
+          "effects": { "food": 0, "ammunition": 0, "oxygen": 0, "base_health_pct": -20 }
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Alien Visitor",
+      "description": "\"We come in Ρεγεα.\" Do you trust them?",
+      "options": [
+        {
+          "key": "A",
+          "action_id": "ALLOW_VISITOR",
+          "intent_category": "diplomacy",
+          "label": "Let Them In",
+          "trigger_keywords": [
+            "let in", "welcome", "open airlock", "allow", "trust", 
+            "dock", "enter", "accept", "invite"
+          ],
+          "effects": { "food": 0, "ammunition": 0, "oxygen": 0, "base_health_pct": 0 }
+        },
+        {
+          "key": "B",
+          "action_id": "REJECT_VISITOR",
+          "intent_category": "rejection",
+          "label": "Go Away",
+          "trigger_keywords": [
+            "go away", "leave", "reject", "deny entry", "lock doors", 
+            "turn back", "refuse", "shoo", "ban"
+          ],
+          "effects": { "food": 0, "ammunition": 0, "oxygen": 0, "base_health_pct": 0 }
+        },
+        {
+          "key": "C",
+          "action_id": "ATTACK_VISITOR",
+          "intent_category": "violence",
+          "label": "Blow Them Up",
+          "trigger_keywords": [
+            "blow up", "shoot", "attack", "kill", "fire", "destroy", 
+            "open fire", "blast", "torpedo", "annihilate"
+          ],
+          "effects": { "food": 0, "ammunition": -10, "oxygen": 0, "base_health_pct": 0 }
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Cult Mentality",
+      "description": "An unassuming technician has suddenly claimed divine powers and is quickly growing a following among the colony. How do you respond?",
+      "options": [
+        {
+          "key": "A",
+          "action_id": "EXECUTE_CULT",
+          "intent_category": "violence",
+          "label": "Stomp It Out",
+          "trigger_keywords": [
+            "stomp", "kill", "shoot", "arrest", "execute", "purge", 
+            "suppress", "force", "security", "jail"
+          ],
+          "effects": { "food": 0, "ammunition": -10, "oxygen": 0, "base_health_pct": -10 }
+        },
+        {
+          "key": "B",
+          "action_id": "BRIBE_CULT",
+          "intent_category": "appeasement",
+          "label": "Bribe the people",
+          "trigger_keywords": [
+            "bribe", "pay off", "give goop", "feed", "rations", 
+            "buy out", "distribute food", "appease"
+          ],
+          "effects": { "food": -10, "ammunition": 0, "oxygen": 0, "base_health_pct": -5 }
+        },
+        {
+          "key": "C",
+          "action_id": "JOIN_CULT",
+          "intent_category": "submission",
+          "label": "ALL HAIL STEVEN",
+          "trigger_keywords": [
+            "hail", "steven", "worship", "join", "pray", "accept", 
+            "submit", "follow", "convert", "cult"
+          ],
+          "effects": { "food": 0, "ammunition": 0, "oxygen": 0, "base_health_pct": -15 }
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "Hyper-Velocity Micro-Meteorite Puncture",
+      "description": "A cluster of high-speed micro-meteorites punches through the storage sector and exterior walls.",
+      "options": [
+        {
+          "key": "A",
+          "action_id": "SEAL_WITH_GOOP",
+          "intent_category": "repair",
+          "label": "Repurpose Space Goop as a seal",
+          "trigger_keywords": [
+            "goop", "seal", "patch", "food paste", "caulk", "plug hole", 
+            "slap goop", "use food", "repair wall"
+          ],
+          "effects": { "food": -5, "ammunition": 0, "oxygen": 0, "base_health_pct": 0 }
+        },
+        {
+          "key": "B",
+          "action_id": "OVERPRESSURIZE_SECTOR",
+          "intent_category": "countermeasure",
+          "label": "Pump Excess Air Into Sector",
+          "trigger_keywords": [
+            "pump air", "excess air", "pressure", "oxygen blow", "equalize", 
+            "counter pressure", "flush air"
+          ],
+          "effects": { "food": 0, "ammunition": 0, "oxygen": -10, "base_health_pct": 0 }
+        },
+        {
+          "key": "C",
+          "action_id": "IGNORE_PUNCTURE",
+          "intent_category": "inaction",
+          "label": "Ignore it",
+          "trigger_keywords": [
+            "ignore", "leave it", "do nothing", "vent storage", 
+            "let it breach", "pass", "abandon sector"
+          ],
+          "effects": { "food": 0, "ammunition": -15, "oxygen": 0, "base_health_pct": -15 }
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "Armory Mutiny",
+      "description": "Disillusioned base guards attempt to seize control of the armory to demand immediate evacuation.",
+      "options": [
+        {
+          "key": "A",
+          "action_id": "BRIBE_GUARDS",
+          "intent_category": "appeasement",
+          "label": "Bribe with Goop",
+          "trigger_keywords": [
+            "bribe", "give goop", "feed guards", "rations", "pay off", 
+            "negotiate", "offer food", "trade"
+          ],
+          "effects": { "food": -10, "ammunition": 0, "oxygen": 0, "base_health_pct": 0 }
+        },
+        {
+          "key": "B",
+          "action_id": "FIGHT_GUARDS",
+          "intent_category": "violence",
+          "label": "Suppress the Rebels",
+          "trigger_keywords": [
+            "suppress", "shoot", "attack", "firefight", "gun down", 
+            "kill rebels", "breach armory", "assault"
+          ],
+          "effects": { "food": 0, "ammunition": -10, "oxygen": 0, "base_health_pct": -5 }
+        },
+        {
+          "key": "C",
+          "action_id": "VENT_ARMORY",
+          "intent_category": "non_lethal",
+          "label": "Depressurize & Knock Out",
+          "trigger_keywords": [
+            "depressurize", "vent", "knock out", "suffocate", "drain air", 
+            "vacuum", "asphyxiate", "pass out"
+          ],
+          "effects": { "food": 0, "ammunition": 0, "oxygen": -10, "base_health_pct": 0 }
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "Crashed Alien Vessel",
+      "description": "An alien scout craft crash-lands upside down against your base perimeter airlock. The pilot is armed, aggressive, and hammering against the seals, shouting \"οϜδο!\"",
+      "options": [
+        {
+          "key": "A",
+          "action_id": "SHOOT_THROUGH_AIRLOCK",
+          "intent_category": "violence",
+          "label": "Shoot at them through the airlock",
+          "trigger_keywords": [
+            "shoot", "fire through", "kill alien", "unload", "blast door", 
+            "gun down", "wall punch", "assault"
+          ],
+          "effects": { "food": 0, "ammunition": -5, "oxygen": 0, "base_health_pct": -10 }
+        },
+        {
+          "key": "B",
+          "action_id": "VENT_SCOUT_AIRLOCK",
+          "intent_category": "containment",
+          "label": "Depressurize Airlock",
+          "trigger_keywords": [
+            "vent airlock", "depressurize", "suffocate", "vacuum", 
+            "drain oxygen", "flush outer door"
+          ],
+          "effects": { "food": 0, "ammunition": 0, "oxygen": -5, "base_health_pct": 0 }
+        },
+        {
+          "key": "C",
+          "action_id": "FEED_ALIEN",
+          "intent_category": "appeasement",
+          "label": "Offer Him Food",
+          "trigger_keywords": [
+            "offer food", "feed", "give goop", "peace offering", "bribe", 
+            "truce", "slide food", "rations"
+          ],
+          "effects": { "food": -5, "ammunition": 0, "oxygen": 0, "base_health_pct": 0 }
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "name": "Oxygen Black Market",
+      "description": "A ring of mechanics has been secretly skimming air tanks and selling compressed canisters to off-shift workers, causing sudden system-wide drops.",
+      "options": [
+        {
+          "key": "A",
+          "action_id": "SWAT_RAID",
+          "intent_category": "violence",
+          "label": "Armed Raid",
+          "trigger_keywords": [
+            "raid", "armed", "swat", "bust", "arrest", "breach", 
+            "shoot", "strike", "confiscate"
+          ],
+          "effects": { "food": 0, "ammunition": -10, "oxygen": -15, "base_health_pct": 0 }
+        },
+        {
+          "key": "B",
+          "action_id": "BUY_BACK_AIR",
+          "intent_category": "trade",
+          "label": "Buy Back",
+          "trigger_keywords": [
+            "buy back", "trade", "barter", "pay food", "exchange", 
+            "give goop", "negotiate canisters"
+          ],
+          "effects": { "food": -10, "ammunition": 0, "oxygen": 0, "base_health_pct": 0 }
+        },
+        {
+          "key": "C",
+          "action_id": "LOCKOUT_QUARTERS",
+          "intent_category": "containment",
+          "label": "Lockout Living Quarters",
+          "trigger_keywords": [
+            "lockout", "weld doors", "lock quarters", "seal rooms", 
+            "isolate mechanics", "shut off power"
+          ],
+          "effects": { "food": 0, "ammunition": 0, "oxygen": 0, "base_health_pct": -10 }
+        }
+      ]
+    }
+  ]
+}
