@@ -13,7 +13,7 @@ const resources = useResources()
   const { pathname } = useLocation()
   const isMarketPage = pathname === '/trades'
   const isScenarioPage = pathname === '/simulation'
-  const { scenario } = useActiveScenario()
+  const { scenario, phase } = useActiveScenario()
 
   const [inputText, setInputText] = useState('')
   const [reaction, setReaction] = useState<LowResourceGameReaction | TradeGameReaction | EventGameReaction | null>(null)
@@ -32,7 +32,7 @@ const resources = useResources()
       ? `CURRENT INCOMING TRADES:\n${incomingTradesText}`
       : undefined
     
-    if (isScenarioPage && scenario) {
+    if (isScenarioPage && phase === 'active' && scenario) {
       incomingEvent = `CURRENT EVENT: ${scenario.name}\n${scenario.description}\nOPTIONS AND THEIR EFFECTS:`;
       scenario.options.forEach((option) => {
         incomingEvent += `\nOption ${option.key}: ${option.label} | Effects: ${JSON.stringify(option.effects)}`;
