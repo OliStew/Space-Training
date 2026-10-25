@@ -42,6 +42,10 @@ As station commander, you must:
 - **Boilerplate & Template Attribution**: Core scaffolding originated from the DeepSpace full-stack starter template.
 - **AI Generated / Assisted Code**: We used Claude, Gemini, and Junie to assist with development. AI was used throughout the project to help with implementation.
 
+## Music used.
+
+-- **Youtube music**: https://cdn.discordapp.com/attachments/1470843325207810076/1563731438413549739/Ambient_Space_Music_-_Nibiru.mp3?ex=6adf5aa3&is=6ade0923&hm=224a54ca440cccb0e22ec43493da7008dcbb6adc7c7af66c60c9da4cd7958e96& 
+
 ## Prerequisites
 
 Make sure you have [Node.js](https://nodejs.org/) installed (Node 22 LTS or newer recommended) along with `npm`:
