@@ -1,20 +1,19 @@
 import React, { useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { useScenarioOptional } from '@/context/ScenarioContext'
+import { useActiveScenario } from '@/context/ActiveScenarioContext'
 import { usePlayerTrades, useResources } from '@/game'
 import { askResourceAI } from '@/services/ai-service'
 import type { LowResourceGameReaction, TradeGameReaction, EventGameReaction } from '@/interfaces/aiReactions'
 
-let incomingEvent= undefined;
-let tradeOffer= undefined;
-//
 export function AIPanel() {
 const resources = useResources()
+  let incomingEvent= undefined;
+  let tradeOffer= undefined;
   const { incoming } = usePlayerTrades()
-  const scenarioContext = useScenarioOptional()
-  const scenario = scenarioContext?.scenario
   const { pathname } = useLocation()
   const isMarketPage = pathname === '/trades'
+  const isScenarioPage = pathname === '/simulation'
+  const { scenario } = useActiveScenario()
 
   const [inputText, setInputText] = useState('')
   const [reaction, setReaction] = useState<LowResourceGameReaction | TradeGameReaction | EventGameReaction | null>(null)
@@ -33,16 +32,14 @@ const resources = useResources()
       ? `CURRENT INCOMING TRADES:\n${incomingTradesText}`
       : undefined
     
-
-    if(scenario){
-      let allOptions = "";
+    if (isScenarioPage && scenario) {
+      incomingEvent = `CURRENT EVENT: ${scenario.name}\n${scenario.description}\nOPTIONS AND THEIR EFFECTS:`;
       scenario.options.forEach((option) => {
-        const effectsJson = JSON.stringify(option.effects);
-        const combinedText = `Option ${option.key}: ${option.label} | Effects: ${effectsJson}\n`;
-        allOptions += combinedText; 
+        incomingEvent += `\nOption ${option.key}: ${option.label} | Effects: ${JSON.stringify(option.effects)}`;
       });
-      incomingEvent = `CURRENT EVENT: ${scenario.name}\n${scenario.description}\nOPTIONS AND THEIR EFFECTS:\n${allOptions}`
-      } else {incomingEvent = undefined}
+    } else {
+      incomingEvent = undefined;
+    }
 
     try {
       const aiResponse = await askResourceAI(inputText, resources, undefined, tradeOffer, incomingEvent, isMarketPage)

@@ -8,8 +8,8 @@ import {
   SCENARIO_RESPONSE_TIME_SECONDS,
   SCENARIO_TIMEOUT_HEALTH_PENALTY,
   useScenario,
-} from '@/context/ScenarioContext'
-import type { Effects } from '@/context/ScenarioContext'
+} from '@/context/ActiveScenarioContext'
+import type { Effects } from '@/context/ActiveScenarioContext'
 
 export {
   SCENARIO_COOLDOWN_SECONDS,

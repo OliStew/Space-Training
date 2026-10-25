@@ -14,11 +14,11 @@
  */
 
 import { useState } from 'react'
-import { Link, Outlet } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { AuthGate, AuthOverlay } from 'deepspace'
 // import { Button } from '@/components/ui'
 import { GameProvider } from '@/game/GameProvider'
-import { ScenarioProvider } from '@/context/ScenarioContext'
+import { ActiveScenarioProvider } from '@/context/ActiveScenarioContext'
 import RobcoShell from '@/FancyComp/RobcoShell'
 import { TerminalFrame } from '@/FancyComp/parts'
 
@@ -26,9 +26,9 @@ export default function ProtectedLayout() {
   return (
     <AuthGate fallback={<SignedOutPanel />}>
       <GameProvider>
-        <ScenarioProvider>
+        <ActiveScenarioProvider>
           <RobcoShell />
-        </ScenarioProvider>
+        </ActiveScenarioProvider>
       </GameProvider>
     </AuthGate>
   )

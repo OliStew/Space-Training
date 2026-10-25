@@ -21,7 +21,7 @@ export default function Combat() {
       <hr />
       <h2>Attack a player</h2>
       <p>
-        Player: <input list="combat-players" size={14} value={to} onChange={(e) => setTo(e.target.value)} />
+        Player: <input list="combat-players" size={Math.max(20, to.length + 2)} value={to} onChange={(e) => setTo(e.target.value)} />
         <datalist id="combat-players">{players.map((p) => <option key={p} value={p} />)}</datalist>{' '}
         Ammo: <input type="number" min="1" step="1" size={5} value={amount} onChange={(e) => setAmount(e.target.value)} />{' '}
         <button onClick={() => attempt(() => attack(to, Number(amount)), `Attack sent. They have ${ATTACK_ARRIVAL_TIME}s to respond.`)}>Attack</button>
