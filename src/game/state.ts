@@ -70,6 +70,8 @@ export interface GameState {
   /** Market trades still on their way. */
   deliveries: Record<string, Delivery>
   history: HistoryEntry[]
+  /** Combat outcomes already applied here (`<attackId>:<role>` → epoch ms), so each lands once. */
+  combatApplied: Record<string, number>
   /** Whether player chose to continue simulation after reaching 30-day victory. */
   continuedAfterVictory?: boolean
 }
@@ -99,6 +101,7 @@ export function initialState(now: number): GameState {
     marketDelays: {},
     deliveries: {},
     history: [],
+    combatApplied: {},
     continuedAfterVictory: false,
   }
 }
@@ -123,6 +126,7 @@ export function reviveState(raw: unknown, now: number): GameState {
     marketDelays: r.marketDelays && typeof r.marketDelays === 'object' ? r.marketDelays : {},
     deliveries: r.deliveries && typeof r.deliveries === 'object' ? r.deliveries : {},
     history: Array.isArray(r.history) ? r.history.slice(-HISTORY_LIMIT) : [],
+    combatApplied: r.combatApplied && typeof r.combatApplied === 'object' ? r.combatApplied : {},
     continuedAfterVictory: Boolean(r.continuedAfterVictory),
   }
 }
@@ -521,3 +525,33 @@ export function continueAfterVictory(state: GameState): GameState {
 }
 
 
+
+// ---- Combat -----------------------------------------------------------------
+
+const COMBAT_APPLIED_LIMIT = 200
+
+/** Pay `ammo` (whole number) for combat. Null if you don't have it. */
+export function spendAmmo(state: GameState, ammo: number): GameState | null {
+  return spend(state, { ammo })
+}
+
+/**
+ * Apply an attack's outcome once: the defender loses `damage` health (never
+ * below zero); the attacker just gets a log line. No-op if already applied.
+ */
+export function applyCombatOutcome(
+  state: GameState,
+  attackId: string,
+  role: 'attacker' | 'defender',
+  text: string,
+  damage: number,
+  now: number,
+): GameState {
+  const key = `${attackId}:${role}`
+  if (state.combatApplied[key]) return state
+  const applied = Object.entries({ ...state.combatApplied, [key]: now })
+    .sort((a, b) => a[1] - b[1])
+    .slice(-COMBAT_APPLIED_LIMIT)
+  const next = { ...state, combatApplied: Object.fromEntries(applied) }
+  return addHistory(role === 'defender' ? applyDelta(next, { health: damage }, -1) : next, text, now)
+}

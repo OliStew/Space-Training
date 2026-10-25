@@ -13,6 +13,7 @@ import { fmt, LABELS, seconds } from '@/components/trading/format'
 import { Badge, Meter, Panel } from '@/FancyComp/parts'
 import { ResourceTiles } from '@/FancyComp/ResourceTiles'
 import { depletionRows, sumResources } from '@/FancyComp/sim'
+import { CombatPreview } from '@/components/combat/CombatPreview'
 
 export default function DashboardPage() {
   const { state, net } = useGame()
@@ -80,6 +81,10 @@ export default function DashboardPage() {
           </div>
         ))}
         <p>Total resources: ${sumResources(state).toLocaleString()}</p>
+      </Panel>
+
+      <Panel title="INCOMING ATTACKS" right={<Link to="/combat">OPEN COMBAT ▶</Link>}>
+        <CombatPreview />
       </Panel>
 
       <Panel title="ALIEN LANGUAGE GAME" right={<Link to="/language">PLAY ▶</Link>}>

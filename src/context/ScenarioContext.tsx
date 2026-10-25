@@ -132,6 +132,8 @@ export function matchOption(text: string, options: Option[]): Option | null {
 export interface ScenarioContextValue {
   scenario: Scenario
   scenarios: Scenario[]
+  options: Option[]
+  feedback: string | null
   chosen: Option | null
   aiOutcome: string | null
   isGeneratingOutcome: boolean
@@ -142,6 +144,7 @@ export interface ScenarioContextValue {
   autoRead: boolean
   setAutoRead: (val: boolean) => void
   executeOption: (opt: Option) => Promise<void>
+  handleChooseOption: (opt: Option) => Promise<void>
   nextRandomScenario: () => void
   speakScenarioOrOutcome: () => void
   speak: (text: string) => Promise<void>
@@ -149,6 +152,7 @@ export interface ScenarioContextValue {
   isPlaying: boolean
   isVoiceLoading: boolean
   ttsError: string | null
+  getScenarioSpokenText: (scenario: Scenario) => string
 }
 
 const ScenarioContext = createContext<ScenarioContextValue | null>(null)
@@ -408,6 +412,8 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
   const value: ScenarioContextValue = {
     scenario,
     scenarios: scenariosList,
+    options: scenario.options,
+    feedback: chosen ? `Selected "${chosen.label}"` : null,
     chosen,
     aiOutcome,
     isGeneratingOutcome,
@@ -418,6 +424,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
     autoRead,
     setAutoRead,
     executeOption,
+    handleChooseOption: executeOption,
     nextRandomScenario,
     speakScenarioOrOutcome,
     speak,
@@ -425,13 +432,14 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
     isPlaying,
     isVoiceLoading,
     ttsError,
+    getScenarioSpokenText,
   }
 
   return <ScenarioContext.Provider value={value}>{children}</ScenarioContext.Provider>
 }
 
 export function useScenario(): ScenarioContextValue {
-  const ctx = useContext(ScenarioContext)
+  const ctx = useScenarioOptional()
   if (!ctx) {
     throw new Error('useScenario must be used within a ScenarioProvider')
   }
