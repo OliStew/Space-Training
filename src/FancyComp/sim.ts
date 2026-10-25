@@ -3,7 +3,10 @@ import { RESOURCE_KEYS } from '@/shared/types'
 
 type Snapshot = { resources: Record<string, number>; depletion: Record<string, number> }
 
-export const sumResources = (s: Snapshot) => RESOURCE_KEYS.reduce((t, k) => t + s.resources[k], 0)
+/** Resources visible in the UI — metal and buildings are hidden. */
+const VISIBLE_RESOURCE_KEYS = RESOURCE_KEYS.filter((k) => k !== 'metal' && k !== 'buildings')
+
+export const sumResources = (s: Snapshot) => VISIBLE_RESOURCE_KEYS.reduce((t, k) => t + s.resources[k], 0)
 
 /** One place for the time-left / status maths (it was duplicated in two pages). */
 export function depletionRows(s: Snapshot) {
