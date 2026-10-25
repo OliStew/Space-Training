@@ -11,19 +11,19 @@ import type {
   EventGameAction,
   EventGameReaction
 } from '../interfaces/aiReactions'
-import { List } from 'lucide-react'
+// import { List } from 'lucide-react'
 ///When changing string keys, make sure to change the context section
 const warningThreshold: Record<string, number> = {
   'health': 50,
   'oxygen': 40,
-  'food/spaceGoop': 20,
+  'food/spaceGoop/Biomass': 20,
   'ammo': 25,
   'spaceBucks/money': 300
 };
 const criticalThreshold: Record<string, number> = {
   'health': 30,
   'oxygen': 10,
-  'food/spaceGoop': 20,
+  'food/spaceGoop/Biomass': 20,
   'ammo': 10,
   'spaceBucks/money': 300
 };
@@ -61,11 +61,12 @@ const EVENT_ACTIONS: EventGameAction[] = [
 ]
 ///THe following need to be changed manually if we change the keys (resources) names
 const REGULAR_ADVISOR = `
-7. VIBE EFFECTS:
+7. The user is currently in the home module.
+8. VIBE EFFECTS:
     -If every resource is "STABLE" or "OPTIMAL", then suggest to the user to "PRACTICE_ALIEN_LANGUAGE" to prepare for events and trades
     -If a resource is "WARNING" or "CRITICAL" suggest purchasing that resource or producing that resource. 
     -These VIBE EFFECTS are not exhaustive.
-8. NO-ISSUE STATE: If all resources are safely above their danger lines, set the action to 'NONE'. Do not invent problems when everything is fine.
+9. NO-ISSUE STATE: If all resources are safely above their danger lines, set the action to 'NONE'. Do not invent problems when everything is fine.
 STRICT ACTION ALLOWLIST:
 You can ONLY choose actions from this list: ${JSON.stringify(REGULAR_ACTIONS)}`
 const TRADE_ADVISOR = `
@@ -81,8 +82,9 @@ const TRADE_ADVISOR = `
 STRICT ACTION ALLOWLIST:
 You can ONLY choose actions from this list: ${JSON.stringify(TRADE_ACTIONS)}`
 const EVENT_ADVISOR = `
-7.
-8. NO-ISSUE STATE: If all resources are safely above their danger lines, set the action to 'NONE'. Do not invent problems when everything is fine.
+7. ACTIVE TRADE LOGIC:
+8. The user is currently in the event module.
+9. NO-ISSUE STATE: If all resources are safely above their danger lines, set the action to 'NONE'. Do not invent problems when everything is fine.
 STRICT ACTION ALLOWLIST:
 You can ONLY choose actions from this list: ${JSON.stringify(EVENT_ACTIONS)}
 `
@@ -109,6 +111,7 @@ You MUST return ONLY a raw JSON object matching this exact TypeScript structure:
 
 FORMATTING CONSTRAINTS:
 Do NOT use bolding (**), italics (*), or markdown bullet points in "text" or "reasoning". You may use spacing only to format text. Otherwise, provide plain unformatted text. 
+No slurs, profanity, sexual content, or vulgar words are allowed. If someone's name is "Dick" that is the only exception. 
 STRICT VIBE AND THRESHOLD RULES:
 1. "OPTIMAL": Set to "OPTIMAL" only when everything is exceptionally high (all resources are over 90 and money is over 2000).
 2. "STABLE": Set to "STABLE" when resources are safe and above danger lines, but not at peak optimal levels. 
@@ -129,25 +132,43 @@ STRICT VIBE AND THRESHOLD RULES:
 6. CONTEXT:
     -IMPORTANCE OF RESOURCES: Health > Oxygen > Space Goop > Money > Ammo
     -Only one resource can be produced at a time. 
-    -0 Space Goop will cause Health to go down
-    -0 Oxygen will cause Health to go down
-    -There is no way to gain Health
-    -0 Health will end the Colony
+    -0 Space Goop will cause Health to go down.
+    -0 Oxygen will cause Health to go down.
+    -There is no way to gain Health.
+    -0 Health means the colony has died.
 `;
 
-export function buildColonyPrompt(userMessage: string, resources: Record<string, any>): string {
-  return `${BASE_ADVISOR}\n\n[COLONY STATUS]\nResources: ${JSON.stringify(resources)}\nPlayer Message: "${userMessage}"`
+export function buildColonyPrompt(
+  userMessage: string, 
+  resources: Record<string, any>,
+  tradeOffer?: any,
+  incomingEvent?: any
+): string {
+  let selectedModeAdvisor = REGULAR_ADVISOR;
+  let moreContext = "";
+
+  // Priority: Event taking place > Trade active > Regular gameplay
+  if (incomingEvent) {
+    selectedModeAdvisor = EVENT_ADVISOR;
+    moreContext = `\n[INCOMING EVENT]\nEvent Details: ${JSON.stringify(incomingEvent)}`;
+  } else if (tradeOffer) {
+    selectedModeAdvisor = TRADE_ADVISOR;
+    moreContext = `\n[ACTIVE TRADE OFFERS]\nTrade Details: ${JSON.stringify(tradeOffer)}`;
+  }
+
+  return `${BASE_ADVISOR}\n${selectedModeAdvisor}\n\n[COLONY STATUS]\nResources: ${JSON.stringify(resources)}${moreContext}\nPlayer Message: "${userMessage}"`;
 }
 
-/* CHANGED: Exported standalone response parser that strips markdown bolding and formats reactions */
-export function parseColonyAdvice(rawText: string): LowResourceGameReaction {
+
+export function parseColonyAdvice<T extends LowResourceGameReaction | TradeGameReaction | EventGameReaction>
+(rawText: string): T {
   const cleanJson = rawText
     .replace(/```json|```/g, '')
     .replace(/\*\*/g, '')
     .replace(/\*/g, '')
     .trim()
 
-  let parsed: Partial<LowResourceGameReaction> = {}
+  let parsed: any = {}
   try {
     parsed = JSON.parse(cleanJson)
   } catch {
@@ -165,16 +186,17 @@ export function parseColonyAdvice(rawText: string): LowResourceGameReaction {
           reasoning: sanitize(step.reasoning)
         }))
       : [],
-  }
+  } as T
 }
 
-/* CHANGED: Simplified getColonyAdvice signature and updated parsing logic using parseColonyAdvice */
-export async function getColonyAdvice(
+export async function getColonyAdvice<T extends LowResourceGameReaction | TradeGameReaction | EventGameReaction>(
   env: any,
   userMessage: string,
   resources: Record<string, any>,
-): Promise<LowResourceGameReaction> {
-  const colonyStatusPayload = buildColonyPrompt(userMessage, resources)
+  tradeOffer?: any,     
+  incomingEvent?: any
+): Promise<T> {
+  const colonyStatusPayload = buildColonyPrompt(userMessage, resources, tradeOffer, incomingEvent)
 
   try {
     const rawResponseText = await generateResponse(
@@ -190,6 +212,6 @@ export async function getColonyAdvice(
       text: "Subroutine stutter detected. Systems operating on fallback.",
       vibe: "WARNING",
       actionChain: [{ stepNumber: 1, action: "NONE", reasoning: "System error." }]
-    };
+    } as T;
   }
 }
