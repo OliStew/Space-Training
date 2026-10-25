@@ -47,7 +47,8 @@ export function AIPanel() {
         paddingBottom: '12px',
         marginBottom: '20px'
       }}>
-        <span>SYSTEM: COLONY TACTICAL AI</span>
+        {/*Colony Runtime Administrator*/}
+        <span>SYSTEM: CORA AI</span>
       </div>
 
       <div style={{
