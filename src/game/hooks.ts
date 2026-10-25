@@ -50,7 +50,6 @@ import type {
   GameOutcome,
   HistoryEntry,
 } from './state'
-import type { DepletingKey, HistoryEntry } from './state'
 import { requiredDefense } from '../shared/combat'
 import { tradeLegs } from '../shared/trade-book'
 import type { Attack, Delta, MarketEntry, OrderReceipt, ResourceKey, TradableKey, Trade, TradeRequestInput } from '../shared/types'
@@ -343,6 +342,8 @@ export function usePlayerTrades(): PlayerTrades {
 export interface AttackView extends Attack {
   /** Whole seconds left to respond (0 when the attack has landed). */
   secondsLeft: number
+  /** Milliseconds left to respond (0 when the attack has landed). */
+  msLeft: number
   /** Ammo that fully defends against it (no harm taken). */
   requiredDefense: number
 }
@@ -366,6 +367,7 @@ export function useCombat(): Combat {
   const view = (a: Attack): AttackView => ({
     ...a,
     secondsLeft: Math.max(0, Math.ceil((a.expiresAt - (now + net.clockSkew)) / 1000)),
+    msLeft: Math.max(0, a.expiresAt - (now + net.clockSkew)),
     requiredDefense: requiredDefense(a.ammo),
   })
   return {

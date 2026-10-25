@@ -335,7 +335,7 @@ export class TradingEngine {
     if (!incoming) throw new Error('That attack is no longer available')
     if (!Number.isInteger(ammo) || ammo < 0) throw new Error('Ammo must be a whole number of 0 or more')
     if (this.serverNow() > incoming.expiresAt) throw new Error('Too late to respond — the attack has landed')
-    if (ammo > 0 && !this.store.tryUpdate((s) => spendAmmo(s, ammo))) throw new Error('Not enough ammo')
+    if (ammo > 0 && !this.store.tryUpdate((s) => spendAmmo(s, ammo))) throw new Error(`Not enough ammo: you chose ${ammo} but have ${Math.floor(this.store.get().resources.ammo)}`)
     let attack: Attack
     try {
       attack = await this.api.defend(id, ammo)

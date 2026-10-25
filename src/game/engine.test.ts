@@ -296,16 +296,16 @@ describe('combat', () => {
     await bob.engine.syncTrades()
     expect(bob.engine.net.get().incomingAttacks).toHaveLength(1)
     const id = bob.engine.net.get().incomingAttacks[0].id
-    await bob.engine.defend(id, 8) // needs 16 for full defense: 20 - 8 * 1.25 = 10 damage
+    await bob.engine.defend(id, 8) // needs 16 for full defense: (20 - 8 * 1.25) * 4 = 40 health lost
     expect(res(bob).ammo).toBe(42)
-    expect(res(bob).health).toBe(90)
+    expect(res(bob).health).toBe(60)
     await bob.engine.syncTrades()
-    expect(res(bob).health).toBe(90)
+    expect(res(bob).health).toBe(60)
     await alice.engine.syncTrades()
     expect(alice.engine.net.get().outgoingAttacks).toHaveLength(0)
   })
 
-  it('an unanswered attack lands in full', async () => {
+  it('an unanswered attack lands in full, and health never goes below zero', async () => {
     const { clock, alice, bob } = setup()
     await bob.engine.syncTrades()
     await alice.engine.syncTrades()
@@ -313,6 +313,6 @@ describe('combat', () => {
     clock.now += 31_000
     await bob.engine.syncTrades()
     await bob.engine.syncTrades()
-    expect(res(bob).health).toBe(50)
+    expect(res(bob).health).toBe(0) // 50 * 4 = 200 damage against 100 health
   })
 })

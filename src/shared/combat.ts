@@ -14,6 +14,8 @@ import { ATTACK_ARRIVAL_TIME } from './types'
 export const ATTACKER_DISADVANTAGE = 0.8
 /** Defender ammo is multiplied by this when working out the damage that gets through. */
 export const DEFENDER_ADVANTAGE = 1.25
+/** Every health loss is multiplied by this. */
+export const COMBAT_MULTI = 4
 
 const MAX_AMMO = 1_000_000
 const RETENTION_MS = 60 * 60 * 1000
@@ -21,23 +23,29 @@ const RETENTION_MS = 60 * 60 * 1000
 const fail = (error: string): BookResult<never> => ({ ok: false, error })
 const ok = <T>(value: T): BookResult<T> => ({ ok: true, value })
 
-/** Ammo a defender must commit to take no harm. */
+/** Ammo a defender must commit to take no harm: attack ammo * disadvantage, rounded up so it is never short of it. */
 export function requiredDefense(
   attackAmmo: number,
   attackerDisadvantage = ATTACKER_DISADVANTAGE,
 ): number {
-  return Math.round(attackAmmo * attackerDisadvantage)
+  return Math.ceil(attackAmmo * attackerDisadvantage - 1e-9)
 }
 
-/** Health lost by the defender. Whole number, never negative. */
+/**
+ * Health lost by the defender. Whole number, never negative. Any defense short
+ * of `requiredDefense` costs at least 1 health, even when rounding would make
+ * `attack - defense * advantage` come out as 0. The result is then multiplied
+ * by `combatMulti`.
+ */
 export function combatDamage(
   attackAmmo: number,
   defenseAmmo: number,
   attackerDisadvantage = ATTACKER_DISADVANTAGE,
   defenderAdvantage = DEFENDER_ADVANTAGE,
+  combatMulti = COMBAT_MULTI,
 ): number {
   if (defenseAmmo >= requiredDefense(attackAmmo, attackerDisadvantage)) return 0
-  return Math.max(0, Math.round(attackAmmo - defenseAmmo * defenderAdvantage))
+  return Math.round(Math.max(1, Math.round(attackAmmo - defenseAmmo * defenderAdvantage)) * combatMulti)
 }
 
 const attacksOf = (state: TradeBookState): Record<string, Attack> => (state.attacks ??= {})

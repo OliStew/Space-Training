@@ -30,6 +30,7 @@
 .rc-root input,.rc-root select,.rc-root textarea{font:inherit;font-size:12px;background:#050a06;color:var(--main);border:2px solid var(--dim);padding:3px 8px;outline:0;border-radius:0}
 .rc-root input:focus,.rc-root select:focus,.rc-root textarea:focus{border-color:var(--main);box-shadow:0 0 10px var(--glow)}
 .rc-root input[type=checkbox]{accent-color:var(--main)}
+.rc-root input[type=range]{accent-color:var(--main);padding:0;border:0;background:transparent;box-shadow:none}
 .rc-root ::-webkit-scrollbar{width:8px;height:8px}.rc-root ::-webkit-scrollbar-thumb{background:var(--dim)}.rc-root ::-webkit-scrollbar-track{background:rgba(0,0,0,.4)}
 
 /* CRT overlays + flicker */
