@@ -93,8 +93,8 @@ export default function Y2kDemoPage() {
         </CardHeader>
         <CardContent style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Badge>Default</Badge>
-          <Badge variant='blue'>Blue</Badge>
-          <Badge variant='pink'>Pink</Badge>
+          <Badge variant='secondary'>Secondary</Badge>
+          <Badge variant='destructive'>Destructive</Badge>
           <Badge variant='outline'>Outline</Badge>
         </CardContent>
       </Card>

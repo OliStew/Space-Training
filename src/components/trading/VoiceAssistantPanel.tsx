@@ -3,15 +3,14 @@ import { Button } from '@/components/ui'
 import { useTextToSpeech } from '@/lib/tts'
 import { Volume2, VolumeX, Loader2 } from 'lucide-react'
 import { useDebugResources, useGameTime, useResources } from '@/game'
-import { useScenario } from '@/context/ScenarioContext'
 import { fmt } from './util'
 
 export function VoiceAssistantPanel() {
   // Read: resources.money, resources.metal, ... (also biomass, oxygen, ammo, buildings)
-  const resources = useResources()
-  const { scenario } = useScenario()
 
-  // Write: addResource('money', 100) / removeResource('biomass', 50) (stops at zero). Not used yet.
+    const resources = useResources()
+
+    // Write: addResource('money', 100) / removeResource('biomass', 50) (stops at zero). Not used yet.
   const { add: addResource, remove: removeResource } = useDebugResources()
   void addResource, removeResource
   // Shared game clock, in seconds since the game began (same value every panel sees). Not used yet.
@@ -21,13 +20,10 @@ export function VoiceAssistantPanel() {
   const [customText, setCustomText] = useState('')
 
   const handleSpeakStatus = () => {
-    const scenarioAlert = scenario
-      ? ` Active alert: ${scenario.name}. Available choices logged.`
-      : ''
     const defaultStatus =
       `Current resource report: You have $${fmt(resources.money)} credits, ` +
       `${fmt(resources.biomass, 1)} biomass, ${fmt(resources.oxygen, 1)} oxygen, ` +
-      `${fmt(resources.health, 1)} health, and ${fmt(resources.ammo, 1)} ammo.${scenarioAlert}`
+      `${fmt(resources.health, 1)} health, and ${fmt(resources.ammo, 1)} ammo.`
     const textToSpeak = customText.trim() || defaultStatus
     speak(textToSpeak).catch(() => {})
   }

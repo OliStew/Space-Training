@@ -83,36 +83,8 @@ STRICT ACTION ALLOWLIST:
 You can ONLY choose actions from this list: ${JSON.stringify(ALLOWED_ACTIONS)}
 `;
 
-export function buildColonyPrompt(
-  userMessage: string,
-  resources: Record<string, any>,
-  scenario?: any,
-): string {
-  let scenarioSection = '[ACTIVE CRISIS SCENARIO]\nNone currently active.'
-  if (scenario && scenario.name) {
-    const optionsSummary = (scenario.options || [])
-      .map((opt: any) => {
-        const effects = opt.effects
-          ? Object.entries(opt.effects)
-              .filter(([_, v]) => v !== undefined && v !== 0)
-              .map(([k, v]) => `${k}: ${v}`)
-              .join(', ')
-          : 'None'
-        return `  - Option ${opt.key}: "${opt.label}" (Impact: ${effects})`
-      })
-      .join('\n')
-
-    scenarioSection = `[ACTIVE CRISIS SCENARIO]
-Event: "${scenario.name}"
-Situation: "${scenario.description}"
-Available Decisions:
-${optionsSummary}
-
-CRISIS ADVICE INSTRUCTION:
-If the commander asks about the active scenario or what option to choose, evaluate the consequences of Option A, B, and C relative to the colony's current resource levels and recommend the best choice.`
-  }
-
-  return `${GAME_ADVISOR_SYSTEM_PROMPT}\n\n${scenarioSection}\n\n[COLONY STATUS]\nResources: ${JSON.stringify(resources)}\nPlayer Message: "${userMessage}"`
+export function buildColonyPrompt(userMessage: string, resources: Record<string, any>): string {
+  return `${GAME_ADVISOR_SYSTEM_PROMPT}\n\n[COLONY STATUS]\nResources: ${JSON.stringify(resources)}\nPlayer Message: "${userMessage}"`
 }
 
 /* CHANGED: Exported standalone response parser that strips markdown bolding and formats reactions */
@@ -149,9 +121,8 @@ export async function getColonyAdvice(
   env: any,
   userMessage: string,
   resources: Record<string, any>,
-  scenario?: any,
 ): Promise<LowResourceGameReaction> {
-  const colonyStatusPayload = buildColonyPrompt(userMessage, resources, scenario)
+  const colonyStatusPayload = buildColonyPrompt(userMessage, resources)
 
   try {
     const rawResponseText = await generateResponse(

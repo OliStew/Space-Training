@@ -1,12 +1,10 @@
 import React, { useState } from 'react'
-import { useResources } from '@/game'
-import { useScenario } from '@/context/ScenarioContext'
+import { useGameTime, useResources } from '@/game'
 import { askResourceAI } from '@/services/ai-service'
 import type { LowResourceGameReaction } from '@/interfaces/aiReactions'
 
 export function AIPanel() {
   const resources = useResources()
-  const { scenario } = useScenario()
 
   const [inputText, setInputText] = useState('')
   const [reaction, setReaction] = useState<LowResourceGameReaction | null>(null)
@@ -19,7 +17,7 @@ export function AIPanel() {
     setIsProcessing(true)
 
     try {
-      const aiResponse = await askResourceAI(inputText, resources, scenario)
+      const aiResponse = await askResourceAI(inputText, resources)
       setReaction(aiResponse)
     } catch (err) {
       console.error('AI transmission error:', err)
@@ -47,24 +45,10 @@ export function AIPanel() {
       <div style={{
         borderBottom: '1px solid #1c4a1c',
         paddingBottom: '12px',
-        marginBottom: '20px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '8px',
+        marginBottom: '20px'
       }}>
         {/*Colony Runtime Administrator*/}
         <span>SYSTEM: CORA AI</span>
-        {scenario ? (
-          <span style={{ fontSize: '0.85em', color: '#ffb86c' }}>
-            [MONITORING SCENARIO: {scenario.name.toUpperCase()}]
-          </span>
-        ) : (
-          <span style={{ fontSize: '0.85em', color: '#6272a4' }}>
-            [SCENARIO: QUIET ORBIT]
-          </span>
-        )}
       </div>
 
       <div style={{
