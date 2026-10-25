@@ -24,6 +24,7 @@ import { useToast } from '@/components/ui'
 import { APP_NAME, SCOPE_ID } from '../../constants'
 import { schemas } from '../../schemas'
 
+
 export default function AppLayout() {
   return (
     <DeepSpaceAuthProvider>

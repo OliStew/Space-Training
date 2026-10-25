@@ -1,12 +1,14 @@
-import type { LowResourceGameReaction } from '../interfaces/aiReactions'
+import type { LowResourceGameReaction, TradeGameReaction, EventGameReaction } from '../interfaces/aiReactions'
 import { getAuthToken } from 'deepspace'
 import { buildColonyPrompt, parseColonyAdvice } from '../ai/gameAdvisor'
 
-export async function askResourceAI(
+export async function askResourceAI<T extends LowResourceGameReaction | TradeGameReaction | EventGameReaction>(
   envOrCommand: any,
   userCommandOrResources?: any,
-  resources?: any
-): Promise<LowResourceGameReaction> {
+  resources?: any,
+  tradeOffer?: any,    
+  incomingEvent?: any
+): Promise<T> {
   const token = await getAuthToken()
   if (!token) {
     throw new Error('Not authenticated. Please log in.')
@@ -20,14 +22,13 @@ export async function askResourceAI(
     
     command = envOrCommand
     resourcesObj = typeof userCommandOrResources === 'object' ? userCommandOrResources : {}
-  } else {
-    
+  } else {    
     command = typeof userCommandOrResources === 'string' ? userCommandOrResources : String(userCommandOrResources || '')
     resourcesObj = typeof resources === 'object' ? resources : {}
   }
 
   
-  const payload = buildColonyPrompt(command, resourcesObj)
+  const payload = buildColonyPrompt(command, resourcesObj, tradeOffer, incomingEvent)
 
   
   const response = await fetch('/api/generate', {
@@ -51,5 +52,5 @@ if (!response.ok) {
   }
 
 
-  return parseColonyAdvice(data.text ?? '')
+  return parseColonyAdvice<T>(data.text ?? '')
 }

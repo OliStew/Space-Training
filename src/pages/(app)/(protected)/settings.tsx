@@ -5,12 +5,16 @@
 
 import { useCallback, useState } from 'react'
 import { signOut, useUser } from 'deepspace'
-import { Button } from '@/components/ui'
+import { Panel } from '@/FancyComp/parts'
+import { setPrefs, usePrefs, type Theme } from '@/FancyComp/prefs'
 import { callAction } from '@/lib/actions'
+
+const THEMES: [Theme, string][] = [['green', 'GREEN PHOSPHOR'], ['amber', 'AMBER CLASSIC'], ['cyan', 'CYAN VECTOR'], ['white', 'MONOCHROME']]
 
 export default function SettingsPage() {
   const { user } = useUser()
   const userId = user?.id
+  const prefs = usePrefs()
   const [resetting, setResetting] = useState(false)
   const [resetError, setResetError] = useState<string | null>(null)
 
@@ -43,44 +47,36 @@ export default function SettingsPage() {
     }
   }, [])
 
-  return (
-    // No background on page wrappers — pages render into whatever the app's
-    // (app)/_layout provides (a plain background, or a raised panel), so they
-    // stay transparent and inherit it.
-    <div className="min-h-full text-foreground">
-      <div className="mx-auto max-w-2xl px-6 py-20">
-        <h1 className="mb-12 text-4xl font-bold tracking-tight">Settings</h1>
+return (
+    <>
+      <Panel title="YOUR ACCOUNT">
+        <div className="rc-row"><span className="rc-muted">NAME</span>{user?.name ?? '—'}</div>
+        <div className="rc-row"><span className="rc-muted">EMAIL</span>{user?.email ?? '—'}</div>
+        <p style={{ marginTop: 14 }}><button className="danger" onClick={() => signOut()}>SIGN OUT</button></p>
+      </Panel>
 
-        <section className="rounded-lg border border-border bg-card p-6">
-          <h2 className="mb-4 text-lg font-semibold">Your account</h2>
+      <Panel title="TERMINAL COLOR PALETTE">
+        <div className="rc-tabs">
+          {THEMES.map(([t, label]) => (
+            <button key={t} className={prefs.theme === t ? '' : 'ghost'} onClick={() => setPrefs({ theme: t })}>{label}</button>
+          ))}
+        </div>
+      </Panel>
 
-          <dl className="space-y-3 text-sm">
-            <div>
-              <dt className="text-muted-foreground">Name</dt>
-              <dd className="text-foreground">{user?.name ?? '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Email</dt>
-              <dd className="text-foreground">{user?.email ?? '—'}</dd>
-            </div>
-          </dl>
+      <Panel title="VISUAL & CRT CONTROLS">
+        <label className="rc-row"><span>Scanlines &amp; screen overlay</span><input type="checkbox" checked={prefs.scanlines} onChange={(e) => setPrefs({ scanlines: e.target.checked })} /></label>
+        <label className="rc-row"><span>CRT tube flicker</span><input type="checkbox" checked={prefs.flicker} onChange={(e) => setPrefs({ flicker: e.target.checked })} /></label>
+      </Panel>
 
-          <Button variant="secondary" className="mt-6" onClick={() => signOut()}>
-            Sign out
-          </Button>
-        </section>
-
-        <section className="mt-6 rounded-lg border border-border bg-card p-6">
-          <h2 className="mb-2 text-lg font-semibold">Data</h2>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Reset all server-side data (markets, trades, settings) and local game state back to their defaults. This cannot be undone.
-          </p>
-          {resetError && <p className="mb-4 text-sm text-destructive">{resetError}</p>}
-          <Button variant="destructive" disabled={resetting} onClick={handleResetData}>
-            {resetting ? 'Resetting…' : 'Reset all data'}
-          </Button>
-        </section>
-      </div>
-    </div>
+      <Panel title="DATA">
+        <p className="rc-muted" style={{ marginBottom: 10 }}>
+          Reset all server-side data (markets, trades, settings) and local game state back to their defaults. This cannot be undone.
+        </p>
+        {resetError && <p style={{ color: 'var(--destructive, #ef4444)', marginBottom: 10, fontSize: '0.875rem' }}>{resetError}</p>}
+        <button className="danger" disabled={resetting} onClick={handleResetData}>
+          {resetting ? 'Resetting…' : 'Reset all data'}
+        </button>
+      </Panel>
+    </>
   )
 }
