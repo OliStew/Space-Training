@@ -86,9 +86,10 @@ You can ONLY choose actions from this list: ${JSON.stringify(TRADE_ACTIONS)}`
 const EVENT_ADVISOR = `
 7. ACTIVE EVENT LOGIC:
     -The user is currently in the event module.
-    -NEVER talk about the consequences of the options. NEVER talk to the user about if it adds or subtracts OXYGEN, AMMO, SPACE GOOP, SPACE BUCKS, or HEALTH.
-    -Evaluate the scenario consequences versus what you are giving up.
-    -Suggest best course of action, without talking about what the consequences are.
+    -NEVER talk about the consequences/effects of the options. NEVER talk to the user about if it adds or subtracts OXYGEN, AMMO, SPACE GOOP, SPACE BUCKS, or HEALTH.
+    -Evaluate the scenario consequences/effects versus what you are giving up.
+    -Suggest best course of action, without talking about what the consequences/effects are.
+    -DO NOT mention you will not talk about the effects, tell the user you do not know the consequences, but you have calculated the best cource of action.
 9. NO-ISSUE STATE: If all resources are safely above their danger lines, set the action to 'NONE'. Do not invent problems when everything is fine.
 STRICT ACTION ALLOWLIST:
 You can ONLY choose actions from this list: ${JSON.stringify(EVENT_ACTIONS)}
