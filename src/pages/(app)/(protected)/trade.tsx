@@ -57,6 +57,39 @@ export default function DashboardPage() {
         ))}
       </Panel>
 
+      <hr />
+      <h2><Link to="/trades">Current Trades</Link></h2>
+      <pre>
+        Outgoing requests: {net.outgoing.length}
+        {net.outgoing.slice(0, 5).map((t) => {
+          const { give } = tradeLegs(t, 'requester')
+          const qty = give[t.resource] ?? 0
+          return `\n  You → ${t.toName}: ${qty} ${LABELS[t.resource]}`
+        })}
+        Active holds: {Object.keys(state.holds).length}
+        {Object.entries(state.holds).slice(0, 5).map(([id, hold]) => {
+          const qty = hold.give[hold.summary.resource] ?? 0
+          return `\n  ${hold.summary.counterparty}: ${qty} ${hold.summary.resource} (held)`
+        })}
+      </pre>
+
+      <hr />
+      <h2><Link to="/simulation">Simulation</Link></h2>
+      <pre>
+        {DEPLETING_KEYS.map((k) => {
+          const amount = state.resources[k]
+          const rate = state.depletion[k]
+          const left = rate > 0 ? `${Math.ceil(amount / rate)}s` : '∞'
+          return `  ${LABELS[k]}: ${fmt(amount, 1)} (${left} left at ${fmt(rate, 2)}/s)\n`
+        })}
+        Total resources: ${RESOURCE_KEYS.reduce((s, k) => s + state.resources[k], 0).toLocaleString()}
+      </pre>
+
+      <hr />
+    <AIPanel />
+        <hr />
+        <h2><Link to="/language">Alien Language Game</Link></h2>
+    </div>
       <Panel title="SIMULATION" right={<Link to="/simulation">DETAILS ▶</Link>}>
         {depletionRows(state).map((d) => (
           <div className="rc-row" key={d.key}>

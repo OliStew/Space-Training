@@ -9,7 +9,6 @@ export type LowResourceGameAction =
   | 'SELL_AMMO'
   | 'SELL_SPACE_GOOP'
   | 'SELL_OXYGEN'
-  | 'EAT_SPACE_GOOP'
   | 'PRACTICE_ALIEN_LANGUAGE'
   | 'NONE';
 
@@ -28,7 +27,7 @@ export interface LowResourceGameReaction {
 }
 
 
-export type EventGameAction =''; //none for now, when an event pops up, the user can choose to consult ai
+export type EventGameAction ='NONE'; 
 export interface EventRecommendation{
   stepNumber: number;
   action: EventGameAction; // The AI MUST pick from your premade list
@@ -41,7 +40,15 @@ export interface EventGameReaction {
 }
   
 
-export type TradeGameAction =''; //none for now, when going to trade, the user can choose to consult ai
+export type TradeGameAction = 'BUY_AMMO' 
+  | 'BUY_SPACE_GOOP' 
+  | 'BUY_OXYGEN' 
+  | 'ACCEPT_TRADE' 
+  | 'SELL_AMMO'
+  | 'SELL_SPACE_GOOP'
+  | 'SELL_OXYGEN'
+  | 'REJECT_TRADE'
+  | 'NONE'; 
 export interface TradeRecommendation{
   stepNumber: number;
   action: TradeGameAction; // The AI MUST pick from your premade list
