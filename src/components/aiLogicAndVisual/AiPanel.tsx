@@ -1,14 +1,23 @@
 import React, { useState } from 'react'
-import { useGameTime, useResources } from '@/game'
+import { useScenario } from '@/context/ScenarioContext'
+import { useResources } from '@/game'
 import { askResourceAI } from '@/services/ai-service'
 import type { LowResourceGameReaction, TradeGameReaction, EventGameReaction } from '@/interfaces/aiReactions'
 
-const tradeOffer= undefined;
-const incomingEvent= undefined;
+let tradeOffer= undefined;
+let incomingEvent= undefined;
 
 //
 export function AIPanel() {
   const resources = useResources()
+let scenario: any = undefined;
+try {
+  const result = useScenario();
+  scenario = result?.scenario;
+} catch {
+  scenario = undefined;
+}
+  
 
   const [inputText, setInputText] = useState('')
   const [reaction, setReaction] = useState<LowResourceGameReaction | TradeGameReaction | EventGameReaction | null>(null)
@@ -20,24 +29,18 @@ export function AIPanel() {
 
     setIsProcessing(true)
 
-    const scenario = undefined; 
+    
 
     if(scenario){
-        const scenarioName = scenario.name;
-        const scenarioDescription = scenario.description;
+      let allOptions = "";
+      scenario.options.forEach((option) => {
+        const effectsJson = JSON.stringify(option.effects);
+        const combinedText = `Option ${option.key}: ${option.label} | Effects: ${effectsJson}\n`;
+        allOptions += combinedText; 
+      });
+      incomingEvent = `CURRENT TRADE OFFFER: ${scenario.name}\n${scenario.description}\nOPTIONS AND THEIR EFFECTS:\n${allOptions}`
+      } else {incomingEvent = undefined}
 
-        console.log(scenarioName);        // e.g., "Goop Mutiny"
-        console.log(scenarioDescription); // e.g., "The latest batch of Space Goop..."
-
-        // 2. Pull the Option Labels and Effects for each choice
-        scenario.options.forEach((option) => {
-            const optionLabel = option.label;
-            const optionEffects = option.effects; // Returns the effects object (e.g., { food: -10, ... })
-
-            console.log(`- Label: ${optionLabel}`);
-            console.log(`  Effects:`, optionEffects);
-        });
-      }
     try {
       const aiResponse = await askResourceAI(inputText, resources, undefined, tradeOffer, incomingEvent)
       setReaction(aiResponse)
