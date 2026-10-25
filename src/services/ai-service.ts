@@ -9,19 +9,18 @@ export async function askResourceAI<T extends LowResourceGameReaction | TradeGam
   userCommandOrResources?: any,
   resources?: any,
   tradeOffer?: any,    
-  incomingEvent?: any
+  incomingEvent?: any,
+  isMarketPage = false,
 ): Promise<T> {
   const token = await getAuthToken()
   if (!token) {
     throw new Error('Not authenticated. Please log in.')
   }
 
-
   let command = ''
-  let resourcesObj: Record<string, any> = {}
+  let resourcesObj: Record<string, unknown> = {}
 
   if (typeof envOrCommand === 'string') {
-    
     command = envOrCommand
     resourcesObj = typeof userCommandOrResources === 'object' ? userCommandOrResources : {}
   } else {    
@@ -52,8 +51,7 @@ export async function askResourceAI<T extends LowResourceGameReaction | TradeGam
     console.warn('Failed to fetch market/trade data for AI context:', err)
   }
 
-  
-  const payload = buildColonyPrompt(command, resourcesObj, tradeOffer, incomingEvent, marketSnapshot, tradeHistory)
+  const payload = buildColonyPrompt(command, resourcesObj, tradeOffer, incomingEvent, marketSnapshot, tradeHistory, isMarketPage)
 
   
   const response = await fetch('/api/generate', {

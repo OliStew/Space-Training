@@ -22,7 +22,10 @@
    'Oxygen',
    'Ammunition',
    'Evil',
-   'Friendly'
+   'Friendly',
+   'Peace',
+   'Food',
+   'Junk'
  ]
 
  /** Translate plain text to the alien alphabet */
