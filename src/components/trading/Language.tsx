@@ -1,107 +1,62 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useMemo, useState } from 'react'
 import { AlienWords, getAlienDisplay } from '@/lib/Language'
+import { Badge } from '@/FancyComp/parts'
 
-interface GameState {
-  alienDisplay: string
-  options: string[]
-  chosenWord: string
-  result: string
-  resultColor: string
-}
+const pick = <T,>(a: readonly T[]) => a[Math.floor(Math.random() * a.length)]
+const shuffle = <T,>(a: readonly T[]) => [...a].sort(() => Math.random() - 0.5)
 
-const initialGameState: GameState = {
-  alienDisplay: '...',
-  options: [],
-  chosenWord: '',
-  result: '',
-  resultColor: ''
-}
-
-function generateRound(): Omit<GameState, 'result' | 'resultColor'> {
-  const chosenWord = AlienWords[Math.floor(Math.random() * AlienWords.length)]
-  const alienDisplay = getAlienDisplay(chosenWord)
-
-  const options = [chosenWord]
-  while (options.length < 3) {
-    const wrong = AlienWords[Math.floor(Math.random() * AlienWords.length)]
-    if (!options.includes(wrong)) {
-      options.push(wrong)
-    }
-  }
-
-  return { alienDisplay, options, chosenWord }
+function newRound(prev?: string) {
+  const word = pick(AlienWords.filter((w) => w !== prev))
+  const decoys = shuffle(AlienWords.filter((w) => w !== word)).slice(0, 3)
+  return { word, options: shuffle([word, ...decoys]) }
 }
 
 export function Language() {
-  const [game, setGame] = useState<GameState>(initialGameState)
+  const [round, setRound] = useState(() => newRound())
+  const [answer, setAnswer] = useState<string | null>(null)
+  const [score, setScore] = useState({ right: 0, total: 0, streak: 0 })
+  const alien = useMemo(() => getAlienDisplay(round.word), [round.word])
+  const correct = answer === round.word
 
-  const startRound = useCallback(() => {
-    const round = generateRound()
-    setGame({ ...round, result: '', resultColor: '' })
-  }, [])
-
-  useEffect(() => {
-    startRound()
-  }, [startRound])
-
-  const checkGuess = useCallback(
-    (selectedWord: string) => {
-      if (selectedWord === game.chosenWord) {
-        setGame((prev) => ({
-          ...prev,
-          result: 'Correct! ✅',
-          resultColor: '#4ade80'
-        }))
-      } else {
-        setGame((prev) => ({
-          ...prev,
-          result: `Wrong! It was "${game.chosenWord}" ❌`,
-          resultColor: '#f87171'
-        }))
-      }
-
-      setTimeout(startRound, 1500)
-    },
-    [game.chosenWord, startRound]
-  )
+  const choose = (o: string) => {
+    if (answer) return
+    setAnswer(o)
+    setScore((s) => ({ right: s.right + (o === round.word ? 1 : 0), total: s.total + 1, streak: o === round.word ? s.streak + 1 : 0 }))
+  }
+  const next = () => { setAnswer(null); setRound(newRound(round.word)) }
 
   return (
-    <div style={{ textAlign: 'center', padding: '20px' }}>
-      <h1>Decode the Alien Word:</h1>
-      <div
-        style={{
-          fontSize: '2.5rem',
-          color: '#38bdf8',
-          margin: '20px',
-          letterSpacing: '3px'
-        }}
-      >
-        {game.alienDisplay}
+    <>
+      <div className="rc-row">
+        <span className="rc-muted">DECODE THE ALIEN WORD</span>
+        <Badge kind="out">{score.right}/{score.total} CORRECT</Badge>
+        <Badge kind={score.streak > 2 ? '' : 'out'}>STREAK {score.streak}</Badge>
       </div>
 
-      <div>
-        {game.options.map((option) => (
+      <div className="rc-tile" style={{ margin: '14px 0', textAlign: 'center', padding: '22px 10px' }}>
+        <small>INCOMING TRANSMISSION</small>
+        <b style={{ fontSize: 34, letterSpacing: '.12em', textShadow: '0 0 12px var(--glow)' }}>{alien}</b>
+      </div>
+
+      <div className="rc-tabs">
+        {round.options.map((o) => (
           <button
-            key={option}
-            onClick={() => checkGuess(option)}
-            style={{
-              display: 'block',
-              margin: '10px auto',
-              padding: '12px 24px',
-              fontSize: '1rem',
-              backgroundColor: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            {option}
-          </button>
+            key={o}
+            className={answer && o !== round.word && o !== answer ? 'ghost' : answer && o === round.word ? '' : 'ghost'}
+            disabled={!!answer && o !== answer && o !== round.word}
+            onClick={() => choose(o)}
+          >{o.toUpperCase()}</button>
         ))}
       </div>
 
-      <h3 style={{ color: game.resultColor }}>{game.result}</h3>
-    </div>
+      {answer && (
+        <p style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Badge kind={correct ? '' : 'crit'}>{correct ? 'DECODED' : 'MISMATCH'}</Badge>
+          <span>{correct ? 'Signal understood.' : <>It meant <b>{round.word}</b>.</>}</span>
+          <button onClick={next}>NEXT WORD ▶</button>
+        </p>
+      )}
+    </>
   )
 }
+

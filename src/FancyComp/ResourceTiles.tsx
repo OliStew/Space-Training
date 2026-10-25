@@ -3,11 +3,14 @@ import { RESOURCE_KEYS } from '@/shared/types'
 import { fmt, LABELS } from '@/components/trading/format'
 import { Meter } from './parts'
 
+/** Resources visible in the UI — metal and buildings are hidden. */
+const VISIBLE_RESOURCE_KEYS = RESOURCE_KEYS.filter((k) => k !== 'metal' && k !== 'buildings')
+
 /** Shared by Dashboard and Trades (was two copies of the same <pre>). Meter maxes are cosmetic. */
 export function ResourceTiles({ state }: { state: { resources: Record<string, number>; depletion: Record<string, number> } }) {
   return (
     <div className="rc-tiles">
-      {RESOURCE_KEYS.map((k) => {
+      {VISIBLE_RESOURCE_KEYS.map((k) => {
         const v = state.resources[k]
         const rate = (DEPLETING_KEYS as readonly string[]).includes(k) ? state.depletion[k] : null
         return (
