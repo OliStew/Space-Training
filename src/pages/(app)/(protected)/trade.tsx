@@ -7,69 +7,55 @@
 import { Link } from 'react-router-dom'
 import { useGame, useNow } from '@/game/GameProvider'
 import { PLAYER_TRADABLE_KEYS, DEPLETING_KEYS } from '@/game/state'
-import { RESOURCE_KEYS } from '@/shared/types'
 import { tradeLegs } from '@/shared/trade-book'
 import { fmt, LABELS, seconds } from '@/components/trading/format'
-import { AIPanel } from '@/components/aiLogicAndVisual/AiPanel'
+import { Badge, Panel } from '@/FancyComp/parts'
+import { ResourceTiles } from '@/FancyComp/ResourceTiles'
+import { depletionRows, sumResources } from '@/FancyComp/sim'
 
 export default function DashboardPage() {
   const { state, net } = useGame()
-  const now = useNow()
-  const serverNow = now + net.clockSkew
+  const serverNow = useNow() + net.clockSkew
+  const market = net.markets[0]
+  const holds = Object.values(state.holds) as any[]
 
   return (
-    <div style={{ padding: '1rem', fontFamily: 'monospace' }}>
-      <h1>Dashboard</h1>
+    <>
+      <Panel title="RESOURCES"><ResourceTiles state={state} /></Panel>
 
-      <hr />
-      <h2>Resources</h2>
-      <pre>
-        {RESOURCE_KEYS.map((k) => {
-          const val = state.resources[k]
-          const line = k === 'money' ? `  ${LABELS[k]}: $${fmt(val)}` : `  ${LABELS[k]}: ${fmt(val, 1)}`
-          const depletion = DEPLETING_KEYS.includes(k as any)
-            ? `  (-${fmt(state.depletion[k as 'biomass' | 'oxygen'], 2)}/s)`
-            : ''
-          return `${line}${depletion}\n`
-        })}
-      </pre>
+      <Panel title="MARKET PRICES" right={<Link to="/trades">OPEN MARKETS ▶</Link>}>
+        {!market ? <p className="rc-muted">{net.error ?? 'Loading…'}</p> : (
+          <>
+            {net.nextUpdateAt && <p className="rc-muted">Updates in {seconds(net.nextUpdateAt - serverNow)}s</p>}
+            {PLAYER_TRADABLE_KEYS.filter((k) => market.prices[k]).map((k) => (
+              <div className="rc-row" key={k}><span>{LABELS[k]}</span>buy {fmt(market.prices[k]!.buy)} / sell {fmt(market.prices[k]!.sell)}</div>
+            ))}
+          </>
+        )}
+      </Panel>
 
-      <hr />
-      <h2><Link to="/trades">Market Prices</Link></h2>
-      {net.markets.length === 0 ? (
-        <p>{net.error ?? 'Loading…'}</p>
-      ) : (
-        <pre>
-          {(() => {
-            const market = net.markets[0]
-            const lines = []
-            if (net.nextUpdateAt) {
-              lines.push(`Updates in ${seconds(net.nextUpdateAt - serverNow)}s`)
-            }
-            PLAYER_TRADABLE_KEYS.filter((k) => market.prices[k]).forEach((k) => {
-              const p = market.prices[k]!
-              lines.push(`  ${LABELS[k]}: buy ${fmt(p.buy)} / sell ${fmt(p.sell)}`)
-            })
-            return lines.join('\n') + '\n'
-          })()}
-        </pre>
-      )}
+      <Panel title="INCOMING TRADES" right={<Badge kind={net.incoming.length ? '' : 'out'}>{net.incoming.length} PENDING</Badge>}>
+        {net.incoming.length === 0 ? <p className="rc-muted">No requests.</p> : (
+          <>
+            {net.incoming.slice(0, 5).map((t: any) => {
+              const qty = tradeLegs(t, 'recipient').receive[t.resource] ?? 0
+              return <div className="rc-row" key={t.id}><span>{t.fromName} → {qty} {LABELS[t.resource as keyof typeof LABELS]}</span>{seconds(t.expiresAt - serverNow)}s left</div>
+            })}
+            {net.incoming.length > 5 && <p className="rc-muted">… and {net.incoming.length - 5} more</p>}
+          </>
+        )}
+      </Panel>
 
-      <hr />
-      <h2><Link to="/trades">Incoming Trades</Link> ({net.incoming.length} pending)</h2>
-      {net.incoming.length === 0 ? (
-        <p>No requests</p>
-      ) : (
-        <pre>
-          {net.incoming.slice(0, 5).map((t) => {
-            const left = seconds(t.expiresAt - serverNow)
-            const { receive } = tradeLegs(t, 'recipient')
-            const qty = receive[t.resource] ?? 0
-            return `  ${t.fromName} → ${qty} ${LABELS[t.resource]} (${left}s left)\n`
-          })}
-          {net.incoming.length > 5 ? `  ... and ${net.incoming.length - 5} more\n` : ''}
-        </pre>
-      )}
+      <Panel title="CURRENT TRADES" right={<Link to="/trades">MANAGE ▶</Link>}>
+        <p>Outgoing requests: {net.outgoing.length}</p>
+        {net.outgoing.slice(0, 5).map((t: any) => (
+          <div className="rc-row" key={t.id}>You → {t.toName}: {tradeLegs(t, 'requester').give[t.resource] ?? 0} {LABELS[t.resource as keyof typeof LABELS]}</div>
+        ))}
+        <p>Active holds: {holds.length}</p>
+        {holds.slice(0, 5).map((h, i) => (
+          <div className="rc-row" key={i}>{h.summary.counterparty}: {h.give[h.summary.resource] ?? 0} {h.summary.resource} (held)</div>
+        ))}
+      </Panel>
 
       <hr />
       <h2><Link to="/trades">Current Trades</Link></h2>
@@ -104,5 +90,14 @@ export default function DashboardPage() {
         <hr />
         <h2><Link to="/language">Alien Language Game</Link></h2>
     </div>
+      <Panel title="SIMULATION" right={<Link to="/simulation">DETAILS ▶</Link>}>
+        {depletionRows(state).map((d) => (
+          <div className="rc-row" key={d.key}>
+            <span>{LABELS[d.key]}: {fmt(d.amount, 1)}</span>{d.left === Infinity ? '∞' : `${d.left}s`} left at {fmt(d.rate, 2)}/s
+          </div>
+        ))}
+        <p>Total resources: ${sumResources(state).toLocaleString()}</p>
+      </Panel>
+    </>
   )
 }
