@@ -70,6 +70,9 @@ export class AppMarketsRoom {
       case '/config':
         if (method === 'POST') return this.handleSetConfig(body)
         return json({ config: this.config })
+      case '/reset':
+        if (method === 'POST') return this.handleReset()
+        return bad('Method Not Allowed', 405)
       default:
         return bad('Not Found', 404)
     }
@@ -186,6 +189,17 @@ export class AppMarketsRoom {
     await this.storage.put('config', next)
     if (intervalChanged) await this.scheduleNext()
     return json({ config: next })
+  }
+
+  /** Reset markets, config, and volumes to their seed defaults. */
+  private async handleReset(): Promise<Response> {
+    this.config = { ...DEFAULT_MARKETS_CONFIG }
+    this.markets = seedMarkets(this.config)
+    this.volumes = {}
+    await this.storage.put({ markets: this.markets, config: this.config, volumes: this.volumes })
+    await this.storage.deleteAlarm()
+    await this.scheduleNext()
+    return json({ reset: true })
   }
 }
 
