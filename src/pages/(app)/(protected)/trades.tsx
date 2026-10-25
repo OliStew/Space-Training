@@ -35,7 +35,6 @@ export default function TradesPage() {
         <PlayerTradesSection net={net} engine={engine} serverNow={serverNow} error={error} success={success} />
       </Panel>
       <Panel title="RECENT ACTIVITY"><HistorySection /></Panel>
-      <Panel title="VOICE ASSISTANT"><VoiceAssistantPanel /></Panel>
     </>
   )
 }
