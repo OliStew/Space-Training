@@ -1,0 +1,11 @@
+{
+  "health": 100, 
+  "oxygen": 100,
+  "SBucks": 1000, 
+  "goop": 50,
+  "ammo": 50,
+  "timeData": {
+    "day": 0,
+    "elapsedSeconds": 0
+  }
+}

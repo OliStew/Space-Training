@@ -1,5 +1,10 @@
-import MarketPage from '@/components/MarketPage'
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 export default function HomePage() {
-  return <MarketPage />
+  const navigate = useNavigate()
+  useEffect(() => {
+    navigate('/trade', { replace: true })
+  }, [navigate])
+  return null
 }

@@ -27,6 +27,11 @@ export const THEMES = [
     label: 'Paper',
     description: 'Light example theme showing the token contract. Replace or delete.',
   },
+  {
+    id: 'y2k',
+    label: 'Y2K Terminal',
+    description: 'Dark terminal theme with green-on-dark aesthetic and Y2K palette.',
+  },
 ] as const
 
 export type ThemeId = (typeof THEMES)[number]['id']

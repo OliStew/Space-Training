@@ -1,0 +1,36 @@
+/* Olivia styles — entry point for the app's stylesheet.
+ * Imports the full Tailwind + theme system, then adds Y2K-specific overrides.
+ * Base styles (base.css) are imported separately in main.tsx to avoid Tailwind purging.
+ */
+@import "./styles.css";
+
+
+[data-theme="y2k"] {
+    font-family: "Comic Sans";
+}
+
+[data-theme="y2k"] a {
+    font-weight: 500;
+    color: var(--color-y2k-blue);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+[data-theme="y2k"] a:hover {
+    color: var(--color-y2k-green);
+}
+
+[data-theme="y2k"] h1 {
+    font-size: 3.2em;
+    line-height: 1.1;
+    color: var(--color-y2k-green);
+    text-shadow: 0 0 12px #39ff8a35;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-theme="y2k"] *,
+    [data-theme="y2k"] *::before,
+    [data-theme="y2k"] *::after {
+        transition-duration: 0.01ms !important;
+    }
+}
