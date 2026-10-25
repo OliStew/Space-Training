@@ -5,17 +5,19 @@
  */
 
 import { Link } from 'react-router-dom'
+import { DAY_DURATION_SECONDS, useDayTime } from '@/game'
 import { useGame, useNow } from '@/game/GameProvider'
 import { PLAYER_TRADABLE_KEYS, DEPLETING_KEYS } from '@/game/state'
 import { tradeLegs } from '@/shared/trade-book'
 import { fmt, LABELS, seconds } from '@/components/trading/format'
-import { Badge, Panel } from '@/FancyComp/parts'
+import { Badge, Meter, Panel } from '@/FancyComp/parts'
 import { ResourceTiles } from '@/FancyComp/ResourceTiles'
 import { depletionRows, sumResources } from '@/FancyComp/sim'
 import { CombatPreview } from '@/components/combat/CombatPreview'
 
 export default function DashboardPage() {
   const { state, net } = useGame()
+  const dayTime = useDayTime()
   const serverNow = useNow() + net.clockSkew
   const market = net.markets[0]
   const holds = Object.values(state.holds) as any[]
@@ -23,6 +25,20 @@ export default function DashboardPage() {
   return (
     <>
       <Panel title="RESOURCES"><ResourceTiles state={state} /></Panel>
+
+      <Panel
+        title="STATION CLOCK & DAY CYCLE"
+        right={<Badge kind="out">DAY {dayTime.day}</Badge>}
+      >
+        <div className="rc-row">
+          <span>STATION TIME: {dayTime.timeStringFull} <span className="rc-muted">({dayTime.phase})</span></span>
+          <span>{dayTime.progressPercent}% ELAPSED</span>
+        </div>
+        <Meter value={dayTime.progressPercent} max={100} />
+        <p className="rc-muted" style={{ marginTop: 8 }}>
+          Cycle length: {DAY_DURATION_SECONDS}s per day. {Math.round(dayTime.secondsLeftInDay)}s until Day {dayTime.day + 1}.
+        </p>
+      </Panel>
 
       <Panel title="MARKET PRICES" right={<Link to="/trades">OPEN MARKETS ▶</Link>}>
         {!market ? <p className="rc-muted">{net.error ?? 'Loading…'}</p> : (

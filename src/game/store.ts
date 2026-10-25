@@ -1,6 +1,6 @@
 import { Observable } from './observable'
-import { reviveState, tick } from './state'
-import type { GameState } from './state'
+import { calcDayTime, reviveState, tick } from './state'
+import type { DayTimeInfo, GameState } from './state'
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem'>
 
@@ -80,3 +80,17 @@ function read(storage: StorageLike | null, key: string): unknown {
 }
 
 export const storeKey = (userId: string) => `life-in-space:game:${userId}`
+
+/** Helper to read the player's saved Day & Time directly from storage outside of React. */
+export function getSavedDayTime(userId: string): DayTimeInfo {
+  if (typeof localStorage === 'undefined') return calcDayTime(0)
+  try {
+    const raw = localStorage.getItem(storeKey(userId))
+    if (!raw) return calcDayTime(0)
+    const parsed = JSON.parse(raw)
+    const seconds = typeof parsed?.gameTime === 'number' ? parsed.gameTime : 0
+    return calcDayTime(seconds)
+  } catch {
+    return calcDayTime(0)
+  }
+}

@@ -1,6 +1,8 @@
 import type { LowResourceGameReaction, TradeGameReaction, EventGameReaction } from '../interfaces/aiReactions'
 import { getAuthToken } from 'deepspace'
 import { buildColonyPrompt, parseColonyAdvice } from '../ai/gameAdvisor'
+import { callAction } from '@/lib/actions'
+import type { MarketsSnapshot, Trade } from '../shared/types'
 
 export async function askResourceAI<T extends LowResourceGameReaction | TradeGameReaction | EventGameReaction>(
   envOrCommand: any,
@@ -14,7 +16,7 @@ export async function askResourceAI<T extends LowResourceGameReaction | TradeGam
     throw new Error('Not authenticated. Please log in.')
   }
 
- 
+
   let command = ''
   let resourcesObj: Record<string, any> = {}
 
@@ -27,8 +29,31 @@ export async function askResourceAI<T extends LowResourceGameReaction | TradeGam
     resourcesObj = typeof resources === 'object' ? resources : {}
   }
 
+  // Fetch market data and trade history for AI context
+  let marketSnapshot: MarketsSnapshot | undefined
+  let tradeHistory: Trade[] | undefined
+
+  try {
+    const [marketResult, tradeResult] = await Promise.all([
+      callAction('marketSnapshot', {}),
+      callAction('tradeSync', { name: '', email: '' })
+    ])
+    
+    const marketData = marketResult as { success?: boolean; data?: MarketsSnapshot; error?: string }
+    const tradeData = tradeResult as { success?: boolean; data?: { trades?: Trade[] }; error?: string }
+    
+    if (marketData.success && marketData.data) {
+      marketSnapshot = marketData.data
+    }
+    if (tradeData.success && tradeData.data && tradeData.data.trades) {
+      tradeHistory = tradeData.data.trades
+    }
+  } catch (err) {
+    console.warn('Failed to fetch market/trade data for AI context:', err)
+  }
+
   
-  const payload = buildColonyPrompt(command, resourcesObj, tradeOffer, incomingEvent)
+  const payload = buildColonyPrompt(command, resourcesObj, tradeOffer, incomingEvent, marketSnapshot, tradeHistory)
 
   
   const response = await fetch('/api/generate', {

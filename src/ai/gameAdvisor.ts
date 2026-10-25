@@ -11,7 +11,7 @@ import type {
   EventGameAction,
   EventGameReaction
 } from '../interfaces/aiReactions'
-// import { List } from 'lucide-react'
+import type { MarketsSnapshot, Trade } from '../shared/types'
 ///When changing string keys, make sure to change the context section
 const warningThreshold: Record<string, number> = {
   'health': 50,
@@ -148,18 +148,44 @@ export function buildColonyPrompt(
   userMessage: string, 
   resources: Record<string, any>,
   tradeOffer?: any,
-  incomingEvent?: any
+  incomingEvent?: any,
+  marketSnapshot?: MarketsSnapshot,
+  tradeHistory?: Trade[]
 ): string {
   let selectedModeAdvisor = REGULAR_ADVISOR;
   let moreContext = "";
 
+  // Add market data context
+  if (marketSnapshot && marketSnapshot.markets.length > 0) {
+    const marketInfo = marketSnapshot.markets.map(m => ({
+      name: m.name,
+      prices: m.prices
+    }));
+    moreContext += `\n[MARKET DATA]\nCurrent market prices: ${JSON.stringify(marketInfo)}`;
+  }
+
+  // Add trade history context
+  if (tradeHistory && tradeHistory.length > 0) {
+    const recentTrades = tradeHistory.slice(-10).map(t => ({
+      id: t.id,
+      from: t.fromName,
+      to: t.toName,
+      side: t.side,
+      resource: t.resource,
+      quantity: t.quantity,
+      unitPrice: t.unitPrice,
+      status: t.status
+    }));
+    moreContext += `\n[TRADE HISTORY]\nRecent trades: ${JSON.stringify(recentTrades)}`;
+  }
+
   // Priority: Event taking place > Trade active > Regular gameplay
   if (incomingEvent) {
     selectedModeAdvisor = EVENT_ADVISOR;
-    moreContext = `\n[INCOMING EVENT]\nEvent Details: ${JSON.stringify(incomingEvent)}`;
+    moreContext += `\n[INCOMING EVENT]\nEvent Details: ${JSON.stringify(incomingEvent)}`;
   } else if (tradeOffer) {
     selectedModeAdvisor = TRADE_ADVISOR;
-    moreContext = `\n[ACTIVE TRADE OFFERS]\nTrade Details: ${JSON.stringify(tradeOffer)}`;
+    moreContext += `\n[ACTIVE TRADE OFFERS]\nTrade Details: ${JSON.stringify(tradeOffer)}`;
   }
 
   return `${BASE_ADVISOR}\n${selectedModeAdvisor}\n\n[COLONY STATUS]\nResources: ${JSON.stringify(resources)}${moreContext}\nPlayer Message: "${userMessage}"`;
@@ -200,9 +226,11 @@ export async function getColonyAdvice<T extends LowResourceGameReaction | TradeG
   userMessage: string,
   resources: Record<string, any>,
   tradeOffer?: any,     
-  incomingEvent?: any
+  incomingEvent?: any,
+  marketSnapshot?: MarketsSnapshot,
+  tradeHistory?: Trade[]
 ): Promise<T> {
-  const colonyStatusPayload = buildColonyPrompt(userMessage, resources, tradeOffer, incomingEvent)
+  const colonyStatusPayload = buildColonyPrompt(userMessage, resources, tradeOffer, incomingEvent, marketSnapshot, tradeHistory)
 
   try {
     const rawResponseText = await generateResponse(
