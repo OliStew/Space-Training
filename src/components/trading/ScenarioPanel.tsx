@@ -58,6 +58,27 @@ You MUST clearly and naturally explain the events that unfold and explicitly sta
 Do NOT use markdown headers, bolding, asterisks, or quotes. Provide clean, vivid narrative prose.`
 }
 
+function cleanNarrative(rawText: string): string {
+  return rawText
+    .replace(/^["'\s]+|["'\s]+$/g, '')
+    .replace(/^(Narrative|Outcome|Result|Here is what happens|Here's what happens|Immediate outcome):\s*/i, '')
+    .replace(/[*#_`]/g, '')
+    .trim()
+}
+
+function getFallbackNarrative(
+  scenario: Scenario,
+  opt: ScenarioOption,
+  consequences: string[],
+): string {
+  const resourceText =
+    consequences.length > 0
+      ? `The operation required immediate resource expenditure, resulting in ${consequences.join(', ')}.`
+      : 'Station telemetry confirmed the situation stabilized without additional resource depletion.'
+
+  return `Station personnel executed the commander's order to "${opt.label}". Crews swiftly responded to mitigate the ${scenario.name.toLowerCase()} incident across all affected sectors. ${resourceText}`
+}
+
 export function ScenarioPanel() {
   const { add: addResource, remove: removeResource } = useDebugResources()
   const { speak, stop, isPlaying, isLoading: isVoiceLoading, error: ttsError } = useTextToSpeech()
@@ -147,18 +168,27 @@ export function ScenarioPanel() {
     setAiOutcome(null)
     setIsGeneratingOutcome(true)
 
-    // Call DeepSpace AI to generate a narrative response
+    // Call DeepSpace AI to generate a narrative response with robust fallback
     let narrative = ''
     try {
       const prompt = buildScenarioPrompt(scenario, opt, changes)
-      narrative = await generate(prompt)
-      narrative = narrative.replace(/[*#]/g, '').trim()
-      setAiOutcome(narrative)
+      // Guard with a 7-second timeout so offline or slow requests fall back immediately
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('AI response timed out')), 7000)
+      })
+
+      const rawResponse = await Promise.race([generate(prompt), timeoutPromise])
+      const cleaned = cleanNarrative(rawResponse)
+      if (cleaned && cleaned.length > 15) {
+        narrative = cleaned
+      } else {
+        narrative = getFallbackNarrative(scenario, opt, changes)
+      }
     } catch (err) {
-      console.error('DeepSpace AI generation failed:', err)
-      narrative = `Option ${opt.key} executed.${changes.length > 0 ? ' Resource impact: ' + changes.join(', ') + '.' : ''}`
-      setAiOutcome(narrative)
+      console.warn('AI narrative generation failed or timed out, applying fallback:', err)
+      narrative = getFallbackNarrative(scenario, opt, changes)
     } finally {
+      setAiOutcome(narrative)
       setIsGeneratingOutcome(false)
     }
 
