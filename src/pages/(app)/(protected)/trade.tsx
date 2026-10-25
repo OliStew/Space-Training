@@ -19,7 +19,14 @@ export default function DashboardPage() {
   const { state, net } = useGame()
   const dayTime = useDayTime()
   const serverNow = useNow() + net.clockSkew
-  const market = net.markets[0]
+  const markets = net.markets as any[]
+  const bestPrices = PLAYER_TRADABLE_KEYS.map((k) => {
+    const quotes = markets.filter((m) => m.prices[k]).map((m) => ({ name: m.name as string, buy: m.prices[k].buy as number, sell: m.prices[k].sell as number }))
+    if (quotes.length === 0) return null
+    const bestBuy = quotes.reduce((a, b) => (b.buy < a.buy ? b : a))
+    const bestSell = quotes.reduce((a, b) => (b.sell > a.sell ? b : a))
+    return { key: k, bestBuy, bestSell }
+  }).filter((r): r is NonNullable<typeof r> => r !== null)
   const holds = Object.values(state.holds) as any[]
 
   return (
@@ -41,11 +48,19 @@ export default function DashboardPage() {
       </Panel>
 
       <Panel title="MARKET PRICES" right={<Link to="/trades">OPEN MARKETS ▶</Link>}>
-        {!market ? <p className="rc-muted">{net.error ?? 'Loading…'}</p> : (
+        {markets.length === 0 ? <p className="rc-muted">{net.error ?? 'Loading…'}</p> : (
           <>
-            {net.nextUpdateAt && <p className="rc-muted">Updates in {seconds(net.nextUpdateAt - serverNow)}s</p>}
-            {PLAYER_TRADABLE_KEYS.filter((k) => market.prices[k]).map((k) => (
-              <div className="rc-row" key={k}><span>{LABELS[k]}</span>buy {fmt(market.prices[k]!.buy)} / sell {fmt(market.prices[k]!.sell)}</div>
+            <p className="rc-muted">
+              Best price for each resource across {markets.length} market{markets.length === 1 ? '' : 's'}.
+              {net.nextUpdateAt && <> Updates in {seconds(net.nextUpdateAt - serverNow)}s.</>}
+            </p>
+            {bestPrices.map(({ key, bestBuy, bestSell }) => (
+              <div className="rc-row" key={key}>
+                <span style={{ flex: '0 0 auto', minWidth: 90 }}>{LABELS[key]}</span>
+                <span style={{ flex: '1 1 0', textAlign: 'right' }}>
+                  buy {fmt(bestBuy.buy)} <span className="rc-muted">({bestBuy.name})</span> / sell {fmt(bestSell.sell)} <span className="rc-muted">({bestSell.name})</span>
+                </span>
+              </div>
             ))}
           </>
         )}
