@@ -4,6 +4,7 @@
  */
 
 import { useGame } from '@/game/GameProvider'
+import { useDayTime } from '@/game'
 import { RESOURCE_KEYS } from '@/shared/types'
 import { fmt, LABELS } from '@/components/trading/format'
 import { ResourcesPanel } from '@/components/trading/ResourcesPanel'
@@ -16,8 +17,20 @@ const VISIBLE_RESOURCE_KEYS = RESOURCE_KEYS.filter((k) => k !== 'metal' && k !==
 
 export default function SimulationPage() {
   const { state } = useGame()
+  const dayTime = useDayTime()
   return (
     <>
+      <Panel
+        title="COLONY CALENDAR & TIME CYCLE"
+        right={<Badge kind="out">DAY {dayTime.day} &middot; {dayTime.phase}</Badge>}
+      >
+        <div className="rc-row">
+          <span>STATION CLOCK: {dayTime.timeStringFull}</span>
+          <span>{Math.round(dayTime.secondsLeftInDay)}S REMAINING IN DAY</span>
+        </div>
+        <Meter value={dayTime.progressPercent} max={100} />
+      </Panel>
+
       <Panel title="CURRENT RESOURCES">
         <ResourcesPanel />
       </Panel>
