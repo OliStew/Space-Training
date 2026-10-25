@@ -29,7 +29,7 @@ export default function TradesPage() {
     <>
       <Panel title="RESOURCES"><ResourceTiles state={state} /></Panel>
       <Panel title="STATION MARKETS" right={net.nextUpdateAt ? `PRICES UPDATE IN ${seconds(net.nextUpdateAt - serverNow)}S` : undefined}>
-        <MarketsSection net={net} engine={engine} error={error} success={success} />
+        <MarketsSection net={net} engine={engine} state={state} error={error} success={success} />
       </Panel>
       <Panel title="PLAYER TRADES NETWORK">
         <PlayerTradesSection net={net} engine={engine} serverNow={serverNow} error={error} success={success} />
@@ -40,7 +40,7 @@ export default function TradesPage() {
   )
 }
 
-function MarketsSection({ net, engine, error, success }: { net: any; engine: any; error: (t: string, m: string) => void; success: (t: string, m?: string) => void }) {
+function MarketsSection({ net, engine, error, success, state }: { net: any; engine: any; state: any; error: (t: string, m: string) => void; success: (t: string, m?: string) => void }) {
   const [selected, setSelected] = useState<string | null>(null)
   const [qty, setQty] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
@@ -61,9 +61,14 @@ function MarketsSection({ net, engine, error, success }: { net: any; engine: any
   return (
     <>
       <div className="rc-tabs">
-        {net.markets.map((m: any) => (
-          <button key={m.name} className={m.name === market.name ? '' : 'ghost'} onClick={() => setSelected(m.name)}>{m.name}</button>
-        ))}
+        {net.markets.map((m: any) => {
+          const delay = state.marketDelays[m.name] ?? 0
+          return (
+            <button key={m.name} className={m.name === market.name ? '' : 'ghost'} onClick={() => setSelected(m.name)}>
+              {m.name} ({delay}s away)
+            </button>
+          )
+        })}
       </div>
       {keys.map((k) => (
         <div className="rc-row" key={k}>
