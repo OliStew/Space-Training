@@ -3,45 +3,37 @@
  * Plain text only; no styled UI.
  */
 
-import { Link } from 'react-router-dom'
 import { useGame } from '@/game/GameProvider'
+import { useDayTime } from '@/game'
 import { RESOURCE_KEYS } from '@/shared/types'
 import { fmt, LABELS } from '@/components/trading/format'
+import { ResourcesPanel } from '@/components/trading/ResourcesPanel'
 import { ScenarioPanel } from '@/components/trading/ScenarioPanel'
-import { ResourcesPanel } from "@/components/trading/ResourcesPanel"
 import { Badge, Meter, Panel } from '@/FancyComp/parts'
 import { depletionRows, sumResources } from '@/FancyComp/sim'
-import { DEPLETING_KEYS } from '@/game/state'
 
 /** Resources visible in the UI — metal and buildings are hidden. */
 const VISIBLE_RESOURCE_KEYS = RESOURCE_KEYS.filter((k) => k !== 'metal' && k !== 'buildings')
 
 export default function SimulationPage() {
   const { state } = useGame()
+  const dayTime = useDayTime()
   return (
     <>
-      <div style={{ padding: '1rem', fontFamily: 'monospace' }}>
-        <p><Link to="/trade">← Dashboard</Link></p>
-        <h1>Simulation</h1>
+      <Panel
+        title="COLONY CALENDAR & TIME CYCLE"
+        right={<Badge kind="out">DAY {dayTime.day} &middot; {dayTime.phase}</Badge>}
+      >
+        <div className="rc-row">
+          <span>STATION CLOCK: {dayTime.timeStringFull}</span>
+          <span>{Math.round(dayTime.secondsLeftInDay)}S REMAINING IN DAY</span>
+        </div>
+        <Meter value={dayTime.progressPercent} max={100} />
+      </Panel>
 
-        <hr />
+      <Panel title="CURRENT RESOURCES">
         <ResourcesPanel />
-        <hr />
-        <h2>Resource Depletion</h2>
-        <pre>
-          {DEPLETING_KEYS.map((k) => {
-            const amount = state.resources[k]
-            const rate = state.depletion[k]
-            const timeLeft = rate > 0 ? Math.ceil(amount / rate) : Infinity
-            const status = timeLeft < 60 ? 'CRITICAL' : timeLeft < 300 ? 'WARNING' : 'Stable'
-            const leftStr = timeLeft === Infinity ? '∞' : `${timeLeft}s`
-            return `  ${LABELS[k]}: ${fmt(amount, 1)} (depleting at ${fmt(rate, 2)}/s, ${leftStr} left) [${status}]\n`
-          })}
-        </pre>
-
-        <hr />
-        <ScenarioPanel />
-      </div>
+      </Panel>
 
       <Panel title="RESOURCE DEPLETION">
         {depletionRows(state).map((d) => (
@@ -53,6 +45,10 @@ export default function SimulationPage() {
             <Meter value={d.amount} max={100} />
           </div>
         ))}
+      </Panel>
+
+      <Panel title="SCENARIO SIMULATOR">
+        <ScenarioPanel />
       </Panel>
 
       <Panel title="ALL RESOURCES" right={`TOTAL $${sumResources(state).toLocaleString()}`}>
