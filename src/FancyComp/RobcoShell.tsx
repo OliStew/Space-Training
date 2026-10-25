@@ -5,9 +5,11 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useGame, useNow } from '@/game/GameProvider'
+import { calcDayTime } from '@/game'
 import { fmt, seconds } from '@/components/trading/format'
 import { AIPanel } from '@/components/aiLogicAndVisual/AiPanel'
 import { Badge, TerminalFrame } from './parts'
+import { EndStateModal } from './EndStateModal'
 
 const ICON = {
   dashboard: 'M3 3h8v8H3zM13 3h8v5h-8zM13 10h8v11h-8zM3 13h8v8H3z',
@@ -64,7 +66,10 @@ export default function RobcoShell() {
   }, [active])
 
   const r = state.resources
+  const dayTime = calcDayTime(state.gameTime)
   const ticker = [
+    `DAY: ${dayTime.day} (${dayTime.timeString})`,
+    `CYCLE: ${dayTime.phase} (${Math.round(dayTime.secondsLeftInDay)}S REMAINING)`,
     `OXYGEN: ${fmt(r.oxygen, 1)}`,
     `BIOMASS: ${fmt(r.biomass, 1)}`,
     `CREDITS: $${fmt(r.money)}`,
@@ -81,7 +86,12 @@ export default function RobcoShell() {
       <header className="rc-ticker">
         <div className="rc-brand"><i /><span>ROBCO UOS v2.0</span></div>
         <div className="rc-track"><div className="rc-run">{group('a')}{group('b')}</div></div>
-        <div className="rc-ticker-end"><Badge kind="out">STABLE</Badge><span>{new Date(now).toLocaleTimeString()}</span></div>
+        <div className="rc-ticker-end">
+          <Badge kind="out">DAY {dayTime.day}</Badge>
+          <span title={`${dayTime.display} (${dayTime.phase}) — ${Math.round(dayTime.secondsLeftInDay)}s remaining`}>
+            {dayTime.timeString} [{dayTime.phase}]
+          </span>
+        </div>
       </header>
 
       {pts && (
@@ -126,6 +136,9 @@ export default function RobcoShell() {
         </div>
         <div className="rc-agent-body"><AIPanel /></div>
       </aside>
+
+      {/* End state modal: displays Victory on Day 30 or Defeat on 0% health */}
+      <EndStateModal />
     </TerminalFrame>
   )
 }

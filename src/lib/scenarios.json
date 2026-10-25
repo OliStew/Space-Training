@@ -43,7 +43,7 @@
     {
       "id": 2,
       "name": "Abandoned Alien Ship",
-      "description": "An alien ship drifts above the base, its name in a language you need to translate.",
+      "description": "An alien ship drifts above the base with the word \"κΛνπ\" written on its hull.",
       "options": [
         {
           "key": "A",
@@ -163,7 +163,7 @@
     {
       "id": 5,
       "name": "Alien Visitor",
-      "description": "\"We come in [insert alien word here].\" Do you trust them?",
+      "description": "\"We come in Ρεγεα.\" Do you trust them?",
       "options": [
         {
           "key": "A",
@@ -323,7 +323,7 @@
     {
       "id": 9,
       "name": "Crashed Alien Vessel",
-      "description": "An alien scout craft crash-lands upside down against your base perimeter airlock. The pilot is armed, aggressive, and hammering against the seals.",
+      "description": "An alien scout craft crash-lands upside down against your base perimeter airlock. The pilot is armed, aggressive, and hammering against the seals, shouting \"οϜδο!\"",
       "options": [
         {
           "key": "A",

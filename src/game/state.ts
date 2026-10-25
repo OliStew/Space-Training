@@ -70,6 +70,10 @@ export interface GameState {
   /** Market trades still on their way. */
   deliveries: Record<string, Delivery>
   history: HistoryEntry[]
+  /** Combat outcomes already applied here (`<attackId>:<role>` → epoch ms), so each lands once. */
+  combatApplied: Record<string, number>
+  /** Whether player chose to continue simulation after reaching 30-day victory. */
+  continuedAfterVictory?: boolean
 }
 
 export const STARTING_RESOURCES: Record<ResourceKey, number> = {
@@ -97,6 +101,8 @@ export function initialState(now: number): GameState {
     marketDelays: {},
     deliveries: {},
     history: [],
+    combatApplied: {},
+    continuedAfterVictory: false,
   }
 }
 
@@ -120,6 +126,8 @@ export function reviveState(raw: unknown, now: number): GameState {
     marketDelays: r.marketDelays && typeof r.marketDelays === 'object' ? r.marketDelays : {},
     deliveries: r.deliveries && typeof r.deliveries === 'object' ? r.deliveries : {},
     history: Array.isArray(r.history) ? r.history.slice(-HISTORY_LIMIT) : [],
+    combatApplied: r.combatApplied && typeof r.combatApplied === 'object' ? r.combatApplied : {},
+    continuedAfterVictory: Boolean(r.continuedAfterVictory),
   }
 }
 
@@ -127,14 +135,17 @@ export function canAfford(state: GameState, cost: Delta): boolean {
   return RESOURCE_KEYS.every((k) => (cost[k] ?? 0) <= state.resources[k] + 1e-9)
 }
 
-/** Add `delta` to the holdings (money is kept to the cent). Never goes below zero. */
+/** Add `delta` to the holdings (money is kept to the cent, health capped at 100). Never goes below zero. */
 export function applyDelta(state: GameState, delta: Delta, sign: 1 | -1 = 1): GameState {
   const resources = { ...state.resources }
   for (const k of RESOURCE_KEYS) {
     const change = (delta[k] ?? 0) * sign
     if (change === 0) continue
     const next = resources[k] + change
-    resources[k] = Math.max(0, k === 'money' ? round2(next) : next)
+    resources[k] = Math.max(
+      0,
+      k === 'money' ? round2(next) : k === 'health' ? Math.min(MAX_HEALTH, next) : next,
+    )
   }
   return { ...state, resources }
 }
@@ -144,7 +155,106 @@ export function spend(state: GameState, cost: Delta): GameState | null {
   return canAfford(state, cost) ? applyDelta(state, cost, -1) : null
 }
 
-/** Drain biomass and oxygen for the time elapsed, then pay out any market trades that have arrived. */
+// ---- Health Regeneration ---------------------------------------------------
+
+/** Seconds required to regenerate 1% health. */
+export const HEALTH_REGEN_INTERVAL_SECONDS = 5
+/** Health regenerated per second (1% every 5 seconds = 0.2% / second). */
+export const HEALTH_REGEN_RATE = 1.0 / HEALTH_REGEN_INTERVAL_SECONDS
+/** Resource threshold required for health regeneration (biomass and oxygen > 50). */
+export const HEALTH_REGEN_THRESHOLD = 50
+/** Maximum colony base health percentage (100%). */
+export const MAX_HEALTH = 100
+
+// ---- Starvation & Oxygen Deprivation (Health Drain) -------------------------
+
+/** Health drain per second when oxygen is 0 (asphyxiation). Depletes faster than biomass. */
+export const OXYGEN_STARVATION_HEALTH_DRAIN = 1.0 // 1.0% / second
+
+/** Health drain per second when biomass is 0 (food starvation). */
+export const BIOMASS_STARVATION_HEALTH_DRAIN = 0.5 // 0.5% / second
+
+/**
+ * Calculates health drain when oxygen and/or biomass reach 0.
+ * Oxygen depletes health at 1.0%/sec (faster); biomass depletes health at 0.5%/sec.
+ */
+export function calculateStarvationHealthDrain(
+  initialBiomass: number,
+  initialOxygen: number,
+  depletion: Record<DepletingKey, number>,
+  seconds: number,
+): { totalDrain: number; oxygenDrain: number; biomassDrain: number } {
+  if (seconds <= 0) return { totalDrain: 0, oxygenDrain: 0, biomassDrain: 0 }
+
+  // 1. Oxygen zero duration
+  let oxygenZeroSeconds = 0
+  if (initialOxygen <= 0) {
+    oxygenZeroSeconds = seconds
+  } else {
+    const oxyRate = depletion.oxygen ?? 0
+    if (oxyRate > 0) {
+      const timeToZero = initialOxygen / oxyRate
+      if (timeToZero < seconds) {
+        oxygenZeroSeconds = seconds - timeToZero
+      }
+    }
+  }
+
+  // 2. Biomass zero duration
+  let biomassZeroSeconds = 0
+  if (initialBiomass <= 0) {
+    biomassZeroSeconds = seconds
+  } else {
+    const bioRate = depletion.biomass ?? 0
+    if (bioRate > 0) {
+      const timeToZero = initialBiomass / bioRate
+      if (timeToZero < seconds) {
+        biomassZeroSeconds = seconds - timeToZero
+      }
+    }
+  }
+
+  const oxygenDrain = oxygenZeroSeconds * OXYGEN_STARVATION_HEALTH_DRAIN
+  const biomassDrain = biomassZeroSeconds * BIOMASS_STARVATION_HEALTH_DRAIN
+  const totalDrain = oxygenDrain + biomassDrain
+
+  return { totalDrain, oxygenDrain, biomassDrain }
+}
+
+/** Check whether health is currently actively regenerating. */
+export function isHealthRegenerating(resources: Record<string, number>): boolean {
+  return (
+    resources.health > 0 &&
+    resources.health < MAX_HEALTH &&
+    resources.biomass > HEALTH_REGEN_THRESHOLD &&
+    resources.oxygen > HEALTH_REGEN_THRESHOLD
+  )
+}
+
+/**
+ * Calculates health regenerated over `seconds` elapsed, taking into account
+ * depletion rates so health only regenerates while biomass and oxygen stay above 50.
+ */
+export function calculateHealthRegen(
+  health: number,
+  biomass: number,
+  oxygen: number,
+  depletion: Record<DepletingKey, number>,
+  seconds: number,
+): number {
+  if (health <= 0 || health >= MAX_HEALTH || seconds <= 0) return 0
+  if (biomass <= HEALTH_REGEN_THRESHOLD || oxygen <= HEALTH_REGEN_THRESHOLD) return 0
+
+  const bioRate = depletion.biomass ?? 0
+  const oxyRate = depletion.oxygen ?? 0
+  const timeBio = bioRate > 0 ? (biomass - HEALTH_REGEN_THRESHOLD) / bioRate : seconds
+  const timeOxy = oxyRate > 0 ? (oxygen - HEALTH_REGEN_THRESHOLD) / oxyRate : seconds
+  const validSeconds = Math.max(0, Math.min(seconds, timeBio, timeOxy))
+
+  return Math.min(MAX_HEALTH - health, validSeconds * HEALTH_REGEN_RATE)
+}
+
+/** Drain biomass and oxygen for the time elapsed, regenerate or deplete base health, then pay out any market trades that have arrived. */
 export function tick(state: GameState, now: number): GameState {
   let next = state
   const seconds = (now - state.lastTick) / 1000
@@ -153,6 +263,30 @@ export function tick(state: GameState, now: number): GameState {
     for (const k of DEPLETING_KEYS) {
       resources[k] = Math.max(0, resources[k] - state.depletion[k] * seconds)
     }
+
+    // Health regenerates 1% per 5s (0.2%/s) when biomass and oxygen are both above 50
+    const regen = calculateHealthRegen(
+      state.resources.health,
+      state.resources.biomass,
+      state.resources.oxygen,
+      state.depletion,
+      seconds,
+    )
+    if (regen > 0) {
+      resources.health = Math.min(MAX_HEALTH, resources.health + regen)
+    }
+
+    // Health drains if oxygen or biomass reach 0 (Oxygen drains faster than biomass)
+    const { totalDrain } = calculateStarvationHealthDrain(
+      state.resources.biomass,
+      state.resources.oxygen,
+      state.depletion,
+      seconds,
+    )
+    if (totalDrain > 0 && resources.health > 0) {
+      resources.health = Math.max(0, resources.health - totalDrain)
+    }
+
     next = { ...state, resources, gameTime: state.gameTime + seconds, lastTick: now }
   } else if (state.lastTick > now) {
     next = { ...state, lastTick: now }
@@ -241,4 +375,183 @@ export function releaseHold(state: GameState, tradeId: string): GameState {
 
 export function setGameTime(state: GameState, seconds: number): GameState {
   return Number.isFinite(seconds) && seconds >= 0 ? { ...state, gameTime: seconds } : state
+}
+
+// ---- Day and Time System ----------------------------------------------------
+
+/** Length of one in-game day in real-world seconds (2 minutes). */
+export const DAY_DURATION_SECONDS = 120
+
+export type DayPhase = 'NIGHT' | 'MORNING' | 'AFTERNOON' | 'EVENING'
+export type DayCycle = 'DAWN' | 'DAY' | 'DUSK' | 'NIGHT'
+
+export interface DayTimeInfo {
+  /** Current day number, starting at 1. Advances every 120 seconds. */
+  day: number
+  /** Elapsed seconds in the current 120-second day (0 to 119.99...). */
+  daySeconds: number
+  /** Seconds remaining until the next day begins (0 to 120). */
+  secondsLeftInDay: number
+  /** Progress through the day from 0.0 (start) to 1.0 (end). */
+  progress: number
+  /** Percentage of current day elapsed (0 to 100). */
+  progressPercent: number
+  /** In-game hour (0 to 23). Each hour lasts 5 real seconds. */
+  hour: number
+  /** In-game minute (0 to 59). Each minute lasts ~83.3ms. */
+  minute: number
+  /** In-game second (0 to 59). */
+  second: number
+  /** Formatted 24h clock string, e.g. "14:05". */
+  timeString: string
+  /** Formatted 24h clock string with seconds, e.g. "14:05:30". */
+  timeStringFull: string
+  /** Formatted day string, e.g. "Day 1". */
+  dayString: string
+  /** Combined day and time label, e.g. "Day 1, 14:05". */
+  display: string
+  /** Time-of-day phase: 'NIGHT' | 'MORNING' | 'AFTERNOON' | 'EVENING'. */
+  phase: DayPhase
+  /** Natural lighting / cycle phase: 'DAWN' | 'DAY' | 'DUSK' | 'NIGHT'. */
+  cycle: DayCycle
+  /** Total elapsed game time in seconds. */
+  totalSeconds: number
+}
+
+/** Pure calculator: derives the exact Day & Time state from elapsed game seconds. */
+export function calcDayTime(gameTime: number): DayTimeInfo {
+  const safeSeconds = Math.max(0, Number.isFinite(gameTime) ? gameTime : 0)
+  const day = Math.floor(safeSeconds / DAY_DURATION_SECONDS) + 1
+  const daySeconds = safeSeconds % DAY_DURATION_SECONDS
+  const secondsLeftInDay = Math.max(0, DAY_DURATION_SECONDS - daySeconds)
+  const progress = daySeconds / DAY_DURATION_SECONDS
+  const progressPercent = Math.min(100, Math.round(progress * 100))
+
+  const totalInGameMinutes = progress * 24 * 60
+  const hour = Math.floor(totalInGameMinutes / 60) % 24
+  const minute = Math.floor(totalInGameMinutes % 60)
+  const second = Math.floor((progress * 24 * 3600) % 60)
+
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  const timeString = `${pad(hour)}:${pad(minute)}`
+  const timeStringFull = `${pad(hour)}:${pad(minute)}:${pad(second)}`
+  const dayString = `Day ${day}`
+  const display = `${dayString}, ${timeString}`
+
+  let phase: DayPhase = 'NIGHT'
+  if (hour >= 5 && hour < 12) phase = 'MORNING'
+  else if (hour >= 12 && hour < 17) phase = 'AFTERNOON'
+  else if (hour >= 17 && hour < 21) phase = 'EVENING'
+  else phase = 'NIGHT'
+
+  let cycle: DayCycle = 'NIGHT'
+  if (hour >= 5 && hour < 8) cycle = 'DAWN'
+  else if (hour >= 8 && hour < 18) cycle = 'DAY'
+  else if (hour >= 18 && hour < 21) cycle = 'DUSK'
+  else cycle = 'NIGHT'
+
+  return {
+    day,
+    daySeconds,
+    secondsLeftInDay,
+    progress,
+    progressPercent,
+    hour,
+    minute,
+    second,
+    timeString,
+    timeStringFull,
+    dayString,
+    display,
+    phase,
+    cycle,
+    totalSeconds: safeSeconds,
+  }
+}
+
+/** Set the game to a specific day number (1-indexed). Optionally keeps current in-day time. */
+export function setDay(state: GameState, day: number, keepTimeOfDay = true): GameState {
+  if (!Number.isFinite(day) || day < 1) return state
+  const currentDaySeconds = keepTimeOfDay ? state.gameTime % DAY_DURATION_SECONDS : 0
+  const nextGameTime = (Math.floor(day) - 1) * DAY_DURATION_SECONDS + currentDaySeconds
+  return setGameTime(state, nextGameTime)
+}
+
+/** Advance the game clock forward to 00:00 of the next day. */
+export function advanceDay(state: GameState): GameState {
+  const currentDay = Math.floor(state.gameTime / DAY_DURATION_SECONDS) + 1
+  return setDay(state, currentDay + 1, false)
+}
+
+// ---- Victory and Defeat End State System ------------------------------------
+
+/** Day count needed to achieve victory. */
+export const VICTORY_DAY_THRESHOLD = 30
+
+export type GameOutcome = 'playing' | 'victory' | 'defeat'
+
+/**
+ * Pure evaluator for simulation end-state:
+ * - Defeat: Colony base health reaches 0% (health <= 0).
+ * - Victory: Day 30 reached (day >= 30) and player hasn't opted to continue.
+ * - Playing: Simulation in progress.
+ */
+export function checkGameOutcome(state: GameState): GameOutcome {
+  if (state.resources.health <= 0) {
+    return 'defeat'
+  }
+  const day = Math.floor(Math.max(0, state.gameTime) / DAY_DURATION_SECONDS) + 1
+  if (day >= VICTORY_DAY_THRESHOLD && !state.continuedAfterVictory) {
+    return 'victory'
+  }
+  return 'playing'
+}
+
+/** Reset simulation state to default starting state. */
+export function resetGameState(state: GameState, now = Date.now()): GameState {
+  const base = initialState(now)
+  return {
+    ...base,
+    marketDelays: state.marketDelays,
+  }
+}
+
+/** Continue playing after reaching victory without repeated popups. */
+export function continueAfterVictory(state: GameState): GameState {
+  return {
+    ...state,
+    continuedAfterVictory: true,
+  }
+}
+
+
+
+// ---- Combat -----------------------------------------------------------------
+
+const COMBAT_APPLIED_LIMIT = 200
+
+/** Pay `ammo` (whole number) for combat. Null if you don't have it. */
+export function spendAmmo(state: GameState, ammo: number): GameState | null {
+  return spend(state, { ammo })
+}
+
+/**
+ * Apply an attack's outcome once: the defender loses `damage` health (never
+ * below zero); the attacker just gets a log line. No-op if already applied.
+ */
+export function applyCombatOutcome(
+  state: GameState,
+  attackId: string,
+  role: 'attacker' | 'defender',
+  text: string,
+  damage: number,
+  now: number,
+): GameState {
+  const key = `${attackId}:${role}`
+  if (state.combatApplied[key]) return state
+  const applied = Object.entries({ ...state.combatApplied, [key]: now })
+    .sort((a, b) => a[1] - b[1])
+    .slice(-COMBAT_APPLIED_LIMIT)
+  const next = { ...state, combatApplied: Object.fromEntries(applied) }
+  return addHistory(role === 'defender' ? applyDelta(next, { health: damage }, -1) : next, text, now)
 }

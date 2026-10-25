@@ -113,4 +113,14 @@ export const actions: Record<string, ActionHandler<Env>> = {
     }
     return { success: true, data: { reset: true } }
   },
+
+  // ---- Combat (shares the Trades Durable Object) ------------------------------
+
+  /** { id (client-chosen), to: player name or email, ammo } */
+  combatAttack: ({ params, env, userId }) => trades(env, userId, '/attack', { id: params.id, to: params.to, ammo: params.ammo }),
+  /** { id, ammo } — the defender's response. Resolves the attack. */
+  combatDefend: ({ params, env, userId }) => trades(env, userId, '/defend', { id: params.id, ammo: params.ammo }),
+  /** Report that this client has seen / applied the attack's outcome. */
+  combatAck: ({ params, env, userId }) => trades(env, userId, '/attack-ack', { id: params.id }),
+
 }

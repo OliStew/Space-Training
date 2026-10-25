@@ -5,9 +5,11 @@
 
 import { useCallback, useState } from 'react'
 import { signOut, useUser } from 'deepspace'
-import { Panel } from '@/FancyComp/parts' 
+import { Badge, Panel } from '@/FancyComp/parts'
 import { setPrefs, usePrefs, type Theme } from '@/FancyComp/prefs'
 import { callAction } from '@/lib/actions'
+import { useDayTime, useDebugResources } from '@/game'
+import { useGame } from '@/game/GameProvider'
 
 const THEMES: [Theme, string][] = [['green', 'GREEN PHOSPHOR'], ['amber', 'AMBER CLASSIC'], ['cyan', 'CYAN VECTOR'], ['white', 'MONOCHROME']]
 
@@ -15,6 +17,9 @@ export default function SettingsPage() {
   const { user } = useUser()
   const userId = user?.id
   const prefs = usePrefs()
+  const dayTime = useDayTime()
+  const { store } = useGame()
+  const { remove: removeResource } = useDebugResources()
   const [resetting, setResetting] = useState(false)
   const [resetError, setResetError] = useState<string | null>(null)
 
@@ -25,7 +30,7 @@ export default function SettingsPage() {
     setResetting(true)
     setResetError(null)
     try {
-      const result = await callAction('resetData', {})
+      const result = (await callAction('resetData', {})) as { success?: boolean; error?: string }
       if (result?.success === false) {
         throw new Error(result.error ?? 'Server reset failed')
       }
@@ -60,6 +65,53 @@ return (
           {THEMES.map(([t, label]) => (
             <button key={t} className={prefs.theme === t ? '' : 'ghost'} onClick={() => setPrefs({ theme: t })}>{label}</button>
           ))}
+        </div>
+      </Panel>
+
+      <Panel title="STATION TIME & DAY CONTROLS" right={<Badge kind="out">DAY {dayTime.day}</Badge>}>
+        <div className="rc-row">
+          <span>CURRENT CLOCK</span>
+          <span>{dayTime.timeStringFull} ({dayTime.phase})</span>
+        </div>
+        <div className="rc-row">
+          <span>CYCLE PROGRESS</span>
+          <span>{dayTime.progressPercent}% ({Math.round(dayTime.secondsLeftInDay)}s remaining)</span>
+        </div>
+        <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+          <button onClick={() => dayTime.advanceDay()}>ADVANCE TO NEXT DAY (+120S) ▶</button>
+          <button onClick={() => dayTime.setDay(30)}>TEST VICTORY (DAY 30) ★</button>
+          <button className="danger" onClick={() => removeResource('health', 100)}>TEST DEFEAT (0% HEALTH) ☠</button>
+          <button className="ghost" onClick={() => dayTime.setTime(0)}>RESET CLOCK TO DAY 1</button>
+        </div>
+        <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+          <button
+            className="danger"
+            onClick={() => store.update((s) => ({ ...s, resources: { ...s.resources, oxygen: 0 } }))}
+          >
+            SET OXYGEN TO 0 (-1.0%/s HP) ☠
+          </button>
+          <button
+            className="danger"
+            onClick={() => store.update((s) => ({ ...s, resources: { ...s.resources, biomass: 0 } }))}
+          >
+            SET BIOMASS TO 0 (-0.5%/s HP) ☠
+          </button>
+          <button
+            className="danger"
+            onClick={() => store.update((s) => ({ ...s, resources: { ...s.resources, oxygen: 0, biomass: 0 } }))}
+          >
+            SET BOTH TO 0 (-1.5%/s HP) ☠
+          </button>
+          <button
+            onClick={() =>
+              store.update((s) => ({
+                ...s,
+                resources: { ...s.resources, oxygen: 100, biomass: 100, health: 100 },
+              }))
+            }
+          >
+            RESTORE LIFE SUPPORT (100) ✦
+          </button>
         </div>
       </Panel>
 

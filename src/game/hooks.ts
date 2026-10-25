@@ -14,20 +14,87 @@
  *  useDepletion()    how fast biomass and oxygen drain, and a setter
  *  useMarkets()      market prices, travel times, in-transit deliveries + buy() / sell()
  *  usePlayerTrades() send / accept / decline / cancel trades with other players
+ *  useCombat()       attack players with ammo, respond to attacks aimed at you
  *  useHistory()      log of what happened
  *  useDebugResources() add()/remove() any resource (temporary cheat buttons)
  */
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useGame, useNow } from './GameProvider'
-import { applyDelta, DEPLETING_KEYS, PLAYER_TRADABLE_KEYS, setDepletion, setGameTime } from './state'
-import type { DepletingKey, HistoryEntry } from './state'
+import {
+  advanceDay,
+  applyDelta,
+  BIOMASS_STARVATION_HEALTH_DRAIN,
+  calcDayTime,
+  calculateHealthRegen,
+  calculateStarvationHealthDrain,
+  checkGameOutcome,
+  continueAfterVictory,
+  DAY_DURATION_SECONDS,
+  DEPLETING_KEYS,
+  HEALTH_REGEN_INTERVAL_SECONDS,
+  HEALTH_REGEN_RATE,
+  HEALTH_REGEN_THRESHOLD,
+  isHealthRegenerating,
+  MAX_HEALTH,
+  OXYGEN_STARVATION_HEALTH_DRAIN,
+  PLAYER_TRADABLE_KEYS,
+  resetGameState,
+  setDay,
+  setDepletion,
+  setGameTime,
+  VICTORY_DAY_THRESHOLD,
+} from './state'
+import type {
+  DayCycle,
+  DayPhase,
+  DayTimeInfo,
+  DepletingKey,
+  GameOutcome,
+  HistoryEntry,
+} from './state'
+import { requiredDefense } from '../shared/combat'
 import { tradeLegs } from '../shared/trade-book'
-import type { Delta, MarketEntry, OrderReceipt, ResourceKey, TradableKey, Trade, TradeRequestInput } from '../shared/types'
+import type { Attack, Delta, MarketEntry, OrderReceipt, ResourceKey, TradableKey, Trade, TradeRequestInput } from '../shared/types'
 
 export { RESOURCE_KEYS, TRADE_TTL_MS } from '../shared/types'
-export { DEPLETING_KEYS, PLAYER_TRADABLE_KEYS }
-export type { Delta, DepletingKey, HistoryEntry, MarketEntry, OrderReceipt, ResourceKey, TradableKey, TradeRequestInput }
+export {
+  advanceDay,
+  BIOMASS_STARVATION_HEALTH_DRAIN,
+  calcDayTime,
+  calculateHealthRegen,
+  calculateStarvationHealthDrain,
+  checkGameOutcome,
+  continueAfterVictory,
+  DAY_DURATION_SECONDS,
+  DEPLETING_KEYS,
+  HEALTH_REGEN_INTERVAL_SECONDS,
+  HEALTH_REGEN_RATE,
+  HEALTH_REGEN_THRESHOLD,
+  isHealthRegenerating,
+  MAX_HEALTH,
+  OXYGEN_STARVATION_HEALTH_DRAIN,
+  PLAYER_TRADABLE_KEYS,
+  resetGameState,
+  setDay,
+  setGameTime,
+  VICTORY_DAY_THRESHOLD,
+}
+export type {
+  DayCycle,
+  DayPhase,
+  DayTimeInfo,
+  Delta,
+  DepletingKey,
+  GameOutcome,
+  HistoryEntry,
+  MarketEntry,
+  OrderReceipt,
+  ResourceKey,
+  TradableKey,
+  TradeRequestInput,
+}
+export { ATTACK_ARRIVAL_TIME } from '../shared/types'
 
 // ---- Resources --------------------------------------------------------------
 
@@ -39,9 +106,39 @@ export function useResources(): Record<VisibleResourceKey, number> {
   return visible
 }
 
+// ---- Day and Time System --------------------------------------------------------
+
+export interface DayTime extends DayTimeInfo {
+  /** Set total game time in seconds. */
+  setTime: (seconds: number) => void
+  /** Jump to a specific day number (e.g. `setDay(2)`). */
+  setDay: (day: number, keepTimeOfDay?: boolean) => void
+  /** Fast-forward to 00:00 of the next day. */
+  advanceDay: () => void
+}
+
+/**
+ * Access the 120-second day and 24-hour time system anywhere in the project.
+ * Returns day number, formatted time, hour/minute/second, phase, and controls.
+ */
+export function useDayTime(): DayTime {
+  const { state, store } = useGame()
+  const info = useMemo(() => calcDayTime(state.gameTime), [state.gameTime])
+  const setTime = useCallback((seconds: number) => store.update((s) => setGameTime(s, seconds)), [store])
+  const setDayAction = useCallback((day: number, keepTime?: boolean) => store.update((s) => setDay(s, day, keepTime)), [store])
+  const advanceDayAction = useCallback(() => store.update((s) => advanceDay(s)), [store])
+
+  return {
+    ...info,
+    setTime,
+    setDay: setDayAction,
+    advanceDay: advanceDayAction,
+  }
+}
+
 // ---- Game time ------------------------------------------------------------------
 
-export interface GameTime {
+export interface GameTime extends DayTime {
   /**
    * The game clock in seconds, e.g. 125.4. Starts at 0, ticks about once a
    * second, is saved with the player, and every component sees the same value.
@@ -53,8 +150,48 @@ export interface GameTime {
 }
 
 export function useGameTime(): GameTime {
+  const dayTime = useDayTime()
+  return {
+    ...dayTime,
+    seconds: dayTime.totalSeconds,
+    set: dayTime.setTime,
+  }
+}
+
+// ---- Game Outcome (End-State System) ----------------------------------------
+
+export interface GameOutcomeInfo {
+  outcome: GameOutcome
+  isVictory: boolean
+  isDefeat: boolean
+  isOver: boolean
+  resetGame: () => void
+  continueSimulation: () => void
+}
+
+/**
+ * Hook to access and respond to the simulation's end states (Victory / Defeat).
+ * - Victory occurs on reaching Day 30 of simulation.
+ * - Defeat occurs if colony base health reaches 0%.
+ */
+export function useGameOutcome(): GameOutcomeInfo {
   const { state, store } = useGame()
-  return { seconds: state.gameTime, set: (seconds) => store.update((s) => setGameTime(s, seconds)) }
+  const outcome = useMemo(() => checkGameOutcome(state), [state])
+  const resetGame = useCallback(() => {
+    store.update((s) => resetGameState(s, Date.now()))
+  }, [store])
+  const continueSimulation = useCallback(() => {
+    store.update((s) => continueAfterVictory(s))
+  }, [store])
+
+  return {
+    outcome,
+    isVictory: outcome === 'victory',
+    isDefeat: outcome === 'defeat',
+    isOver: outcome !== 'playing',
+    resetGame,
+    continueSimulation,
+  }
 }
 
 // ---- Depletion ----------------------------------------------------------------
@@ -203,6 +340,48 @@ export function usePlayerTrades(): PlayerTrades {
     decline: (id) => engine.declineTrade(id),
     cancel: (id) => engine.cancelTrade(id),
     counter,
+  }
+}
+
+// ---- Combat ---------------------------------------------------------------------
+
+export interface AttackView extends Attack {
+  /** Whole seconds left to respond (0 when the attack has landed). */
+  secondsLeft: number
+  /** Milliseconds left to respond (0 when the attack has landed). */
+  msLeft: number
+  /** Ammo that fully defends against it (no harm taken). */
+  requiredDefense: number
+}
+
+export interface Combat {
+  /** Names you can attack (emails also work). */
+  players: string[]
+  /** Attacks aimed at you that you can still respond to. */
+  incoming: AttackView[]
+  /** Your attacks still waiting for a response. */
+  outgoing: AttackView[]
+  /** Spend `ammo` to attack a player. Throws if you lack the ammo or the player is unknown. */
+  attack: (to: string, ammo: number) => Promise<void>
+  /** Respond to an attack with `ammo` (0 = take it). Resolves it immediately. */
+  defend: (attackId: string, ammo: number) => Promise<void>
+}
+
+export function useCombat(): Combat {
+  const { net, engine } = useGame()
+  const now = useNow(500)
+  const view = (a: Attack): AttackView => ({
+    ...a,
+    secondsLeft: Math.max(0, Math.ceil((a.expiresAt - (now + net.clockSkew)) / 1000)),
+    msLeft: Math.max(0, a.expiresAt - (now + net.clockSkew)),
+    requiredDefense: requiredDefense(a.ammo),
+  })
+  return {
+    players: net.players,
+    incoming: net.incomingAttacks.map(view),
+    outgoing: net.outgoingAttacks.map(view),
+    attack: async (to, ammo) => void (await engine.attack(to, ammo)),
+    defend: async (id, ammo) => void (await engine.defend(id, ammo)),
   }
 }
 

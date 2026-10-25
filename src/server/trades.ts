@@ -6,6 +6,7 @@
  * never by the browser). Logic lives in shared/trade-book.ts.
  */
 
+import { ackAttack, attacksFor, createAttack, defendAttack } from '../shared/combat'
 import {
   ackTrade,
   acceptTrade,
@@ -54,6 +55,7 @@ export class AppTradesRoom {
           trades: tradesFor(this.book, userId, now),
           serverTime: now,
           players: playerNames(this.book, userId),
+          attacks: attacksFor(this.book, userId, now),
         }
         result = { ok: true, value }
         break
@@ -72,6 +74,16 @@ export class AppTradesRoom {
         break
       case '/ack':
         ackTrade(this.book, userId, id, now)
+        result = { ok: true, value: {} }
+        break
+      case '/attack':
+        result = createAttack(this.book, userId, { to: String(body.to ?? ''), ammo: Number(body.ammo) }, id, now)
+        break
+      case '/defend':
+        result = defendAttack(this.book, userId, id, Number(body.ammo), now)
+        break
+      case '/attack-ack':
+        ackAttack(this.book, userId, id, now)
         result = { ok: true, value: {} }
         break
       case '/reset':

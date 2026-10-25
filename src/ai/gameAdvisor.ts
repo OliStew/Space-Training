@@ -11,7 +11,7 @@ import type {
   EventGameAction,
   EventGameReaction
 } from '../interfaces/aiReactions'
-// import { List } from 'lucide-react'
+import type { MarketsSnapshot, Trade } from '../shared/types'
 ///When changing string keys, make sure to change the context section
 const warningThreshold: Record<string, number> = {
   'health': 50,
@@ -57,7 +57,9 @@ const TRADE_ACTIONS: TradeGameAction[] = [
 ]
 
 const EVENT_ACTIONS: EventGameAction[] = [
-'NONE'
+'OPTION_A', 
+'OPTION_B', 
+'OPTION_C'
 ]
 ///THe following need to be changed manually if we change the keys (resources) names
 const REGULAR_ADVISOR = `
@@ -71,19 +73,23 @@ STRICT ACTION ALLOWLIST:
 You can ONLY choose actions from this list: ${JSON.stringify(REGULAR_ACTIONS)}`
 const TRADE_ADVISOR = `
 7. ACTIVE TRADE LOGIC:
-- The user is currently in the trade module.
-- The user can choose to buy or sell their supplies to Aliens that propose trades. 
-- Resources can be exchanged for money or money for resources.
-- Resources CANNOT be exchanged for other resources.
-- ONLY these ressouces can be exchanged: OXYGEN, AMMO, SPACE GOOP, SPACE BUCKS. No other resource can be exchanged.
-- Evaluate the offered items versus what you are giving up. 
-- Only recommend ACCEPT_TRADE if it addresses critical shortages or provides exceptional economic value without bankrupting the colony. Otherwise, recommend REJECT_TRADE.
+    - The user is currently in the trade module.
+    - The user can choose to buy or sell their supplies to Aliens that propose trades. 
+    - Resources can be exchanged for money or money for resources.
+    - Resources CANNOT be exchanged for other resources.
+    - ONLY these ressouces can be exchanged: OXYGEN, AMMO, SPACE GOOP, SPACE BUCKS. No other resource can be exchanged.
+    - Evaluate the offered items versus what you are giving up. 
+    - Only recommend ACCEPT_TRADE if it addresses critical shortages or provides exceptional economic value without bankrupting the colony. Otherwise, recommend REJECT_TRADE.
 8. NO-ISSUE STATE: If all resources are safely above their danger lines, set the action to 'NONE'. Do not invent problems when everything is fine.
 STRICT ACTION ALLOWLIST:
 You can ONLY choose actions from this list: ${JSON.stringify(TRADE_ACTIONS)}`
 const EVENT_ADVISOR = `
-7. ACTIVE TRADE LOGIC:
-8. The user is currently in the event module.
+7. ACTIVE EVENT LOGIC:
+    -The user is currently in the event module.
+    -NEVER talk about the consequences/effects of the options. NEVER talk to the user about if it adds or subtracts OXYGEN, AMMO, SPACE GOOP, SPACE BUCKS, or HEALTH.
+    -Evaluate the scenario consequences/effects versus what you are giving up.
+    -Suggest best course of action, without talking about what the consequences/effects are.
+    -DO NOT mention you will not talk about the effects, tell the user you do not know the consequences, but you have calculated the best cource of action.
 9. NO-ISSUE STATE: If all resources are safely above their danger lines, set the action to 'NONE'. Do not invent problems when everything is fine.
 STRICT ACTION ALLOWLIST:
 You can ONLY choose actions from this list: ${JSON.stringify(EVENT_ACTIONS)}
@@ -142,18 +148,44 @@ export function buildColonyPrompt(
   userMessage: string, 
   resources: Record<string, any>,
   tradeOffer?: any,
-  incomingEvent?: any
+  incomingEvent?: any,
+  marketSnapshot?: MarketsSnapshot,
+  tradeHistory?: Trade[]
 ): string {
   let selectedModeAdvisor = REGULAR_ADVISOR;
   let moreContext = "";
 
+  // Add market data context
+  if (marketSnapshot && marketSnapshot.markets.length > 0) {
+    const marketInfo = marketSnapshot.markets.map(m => ({
+      name: m.name,
+      prices: m.prices
+    }));
+    moreContext += `\n[MARKET DATA]\nCurrent market prices: ${JSON.stringify(marketInfo)}`;
+  }
+
+  // Add trade history context
+  if (tradeHistory && tradeHistory.length > 0) {
+    const recentTrades = tradeHistory.slice(-10).map(t => ({
+      id: t.id,
+      from: t.fromName,
+      to: t.toName,
+      side: t.side,
+      resource: t.resource,
+      quantity: t.quantity,
+      unitPrice: t.unitPrice,
+      status: t.status
+    }));
+    moreContext += `\n[TRADE HISTORY]\nRecent trades: ${JSON.stringify(recentTrades)}`;
+  }
+
   // Priority: Event taking place > Trade active > Regular gameplay
   if (incomingEvent) {
     selectedModeAdvisor = EVENT_ADVISOR;
-    moreContext = `\n[INCOMING EVENT]\nEvent Details: ${JSON.stringify(incomingEvent)}`;
+    moreContext += `\n[INCOMING EVENT]\nEvent Details: ${JSON.stringify(incomingEvent)}`;
   } else if (tradeOffer) {
     selectedModeAdvisor = TRADE_ADVISOR;
-    moreContext = `\n[ACTIVE TRADE OFFERS]\nTrade Details: ${JSON.stringify(tradeOffer)}`;
+    moreContext += `\n[ACTIVE TRADE OFFERS]\nTrade Details: ${JSON.stringify(tradeOffer)}`;
   }
 
   return `${BASE_ADVISOR}\n${selectedModeAdvisor}\n\n[COLONY STATUS]\nResources: ${JSON.stringify(resources)}${moreContext}\nPlayer Message: "${userMessage}"`;
@@ -194,9 +226,11 @@ export async function getColonyAdvice<T extends LowResourceGameReaction | TradeG
   userMessage: string,
   resources: Record<string, any>,
   tradeOffer?: any,     
-  incomingEvent?: any
+  incomingEvent?: any,
+  marketSnapshot?: MarketsSnapshot,
+  tradeHistory?: Trade[]
 ): Promise<T> {
-  const colonyStatusPayload = buildColonyPrompt(userMessage, resources, tradeOffer, incomingEvent)
+  const colonyStatusPayload = buildColonyPrompt(userMessage, resources, tradeOffer, incomingEvent, marketSnapshot, tradeHistory)
 
   try {
     const rawResponseText = await generateResponse(
