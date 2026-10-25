@@ -41,6 +41,15 @@ try {
       incomingEvent = `CURRENT EVENT: ${scenario.name}\n${scenario.description}\nOPTIONS AND THEIR EFFECTS:\n${allOptions}`
       } else {incomingEvent = undefined}
 
+      incomingEvent = `
+      CURRENT EVENT: Oxygen Leak Detected
+      A high-pressure seal in the primary oxygen recycler has ruptured, causing a steady drain on life support reserves.
+      OPTIONS AND THEIR EFFECTS:
+      Option A: Seal bulkhead manually | Effects: {"oxygen":15.0,"health":-10.0}
+      Option B: Reroute reserve tanks | Effects: {"oxygen":30.0,"money":-150.0}
+      Option C: Ignore and focus on production | Effects: {"biomass":5.0,"oxygen":-20.0}
+`
+
     try {
       const aiResponse = await askResourceAI(inputText, resources, undefined, tradeOffer, incomingEvent)
       setReaction(aiResponse)
