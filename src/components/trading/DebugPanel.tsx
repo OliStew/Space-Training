@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { RESOURCE_KEYS, useDebugResources } from '@/game'
 
+/** Resources visible in the debug panel — metal and buildings are hidden. */
+const VISIBLE_RESOURCE_KEYS = RESOURCE_KEYS.filter((k) => k !== 'metal' && k !== 'buildings')
+
 /** Temporary cheat buttons. Uses useDebugResources() -> { add(resource, amount), remove(resource, amount) }. */
 export function DebugPanel() {
   const { add, remove } = useDebugResources()
@@ -12,7 +15,7 @@ export function DebugPanel() {
       <h2>Debug: adjust resources</h2>
       <p>Amount: <input type="number" min="0" size={8} value={amount} onChange={(e) => setAmount(e.target.value)} /></p>
       <ul>
-        {RESOURCE_KEYS.map((key) => (
+        {VISIBLE_RESOURCE_KEYS.map((key) => (
           <li key={key}>
             {key}{' '}
             <button onClick={() => remove(key, n)}>- Remove</button>{' '}
