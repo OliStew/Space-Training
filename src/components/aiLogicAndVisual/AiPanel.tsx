@@ -1,22 +1,29 @@
 import React, { useState } from 'react'
 import { useScenario } from '@/context/ScenarioContext'
-import { useResources } from '@/game'
+import { usePlayerTrades, useResources } from '@/game'
 import { askResourceAI } from '@/services/ai-service'
 import type { LowResourceGameReaction, TradeGameReaction, EventGameReaction } from '@/interfaces/aiReactions'
 
-let tradeOffer= undefined;
 let incomingEvent= undefined;
-
+let tradeOffer= undefined;
 //
 export function AIPanel() {
-  const resources = useResources()
-let scenario: any = undefined;
+const resources = useResources()
+
+let trades: any = undefined;
+try {const trades = usePlayerTrades()} catch {trades=undefined}
+
+
+
+ let scenario: any = undefined;
+ 
 try {
   const result = useScenario();
   scenario = result?.scenario;
 } catch {
   scenario = undefined;
 }
+
   
 
   const [inputText, setInputText] = useState('')
@@ -29,7 +36,15 @@ try {
 
     setIsProcessing(true)
 
-    
+    let incomingTradesText = "";
+    if(trades){
+      trades.incoming.forEach((trade) => {
+        const giveJson = JSON.stringify(trade.youGive);
+        incomingTradesText += `Trade ${trade.id}: From ${trade.fromName} | ${trade.side} ${trade.quantity} ${trade.resource} | You Give: ${giveJson}\n`;
+      });
+    }
+    if(incomingTradesText){tradeOffer = `CURRENT INCOMING TRADES:\n${incomingTradesText}`}
+      
 
     if(scenario){
       let allOptions = "";
