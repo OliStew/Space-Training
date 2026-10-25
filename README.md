@@ -40,7 +40,7 @@ As station commander, you must:
 - **ElevenLabs Voice API**: Synthesizes real-time text-to-speech audio reports for incoming crisis alerts and colony status updates.
 - **Claude Haiku 5.5**: Used for AI assistant C.O.R.A.'s text based responses and simulation narrative writing.
 - **Boilerplate & Template Attribution**: Core scaffolding originated from the DeepSpace full-stack starter template.
-- **AI Generated / Assisted Code**: Terminal CRT aesthetics (`robco.css`), state-machine transitions, and Vitest test suites were authored with AI pair-programming assistance.
+- **AI Generated / Assisted Code**: Terminal CRT aesthetics (`goopcorp.css`), state-machine transitions, and Vitest test suites were authored with AI pair-programming assistance.
 
 ## Prerequisites
 

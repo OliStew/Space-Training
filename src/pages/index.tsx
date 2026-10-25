@@ -18,11 +18,11 @@ export default function LandingPage() {
       <div className="rc-center">
         <div className="rc-win">
           <div className="rc-titlebar">
-            <div className="t"><small>robco.exe_</small><b>ROBCO OS INITIALIZATION</b></div>
+            <div className="t"><small>goopcorp.exe_</small><b>GOOPCORP OS INITIALIZATION</b></div>
             <span style={{ marginRight: 12 }}><Badge kind="out">v2.0.99</Badge></span>
           </div>
           <div style={{ padding: 24 }}>
-            <h1>WELCOME TO ROBCO INDUSTRIES UNIFIED OS</h1>
+            <h1>WELCOME TO GOOPCORP INDUSTRIES UNIFIED OS</h1>
             <p className="rc-muted">AUTHORIZED PERSONNEL ONLY</p>
             <div className="rc-panel" style={{ margin: '18px 0' }}>
               {BOOT.map((l) => <p key={l}>✦ {l}</p>)}

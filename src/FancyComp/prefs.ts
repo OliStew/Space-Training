@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'react'
 export type Theme = 'green' | 'amber' | 'cyan' | 'white'
 export interface Prefs { theme: Theme; scanlines: boolean; flicker: boolean }
 
-const KEY = 'robco-prefs'
+const KEY = 'goopcorp-prefs'
 const DEFAULTS: Prefs = { theme: 'green', scanlines: true, flicker: true }
 
 function load(): Prefs {

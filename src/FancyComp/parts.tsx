@@ -1,4 +1,4 @@
-import './robco.css'
+import './goopcorp.css'
 import type { ReactNode } from 'react'
 import { usePrefs } from './prefs'
 

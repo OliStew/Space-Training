@@ -40,7 +40,7 @@ function SignedOutPanel() {
     <TerminalFrame>
       <div className="rc-center">
         <div className="rc-win">
-          <div className="rc-titlebar"><div className="t"><small>robco.exe_</small><b>ACCESS RESTRICTED</b></div></div>
+          <div className="rc-titlebar"><div className="t"><small>goopcorp.exe_</small><b>ACCESS RESTRICTED</b></div></div>
           <div style={{ padding: 24 }}>
             <h1>AUTHENTICATION REQUIRED</h1>
             <p className="rc-muted">This terminal is only available to signed-in operators.</p>
