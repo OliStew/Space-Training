@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { useScenario } from '@/context/ScenarioContext'
+import { useLocation } from 'react-router-dom'
+import { useScenarioOptional } from '@/context/ScenarioContext'
 import { usePlayerTrades, useResources } from '@/game'
 import { askResourceAI } from '@/services/ai-service'
 import type { LowResourceGameReaction, TradeGameReaction, EventGameReaction } from '@/interfaces/aiReactions'
@@ -9,22 +10,11 @@ let tradeOffer= undefined;
 //
 export function AIPanel() {
 const resources = useResources()
-
-let trades: any = undefined;
-try {const trades = usePlayerTrades()} catch {trades=undefined}
-
-
-
- let scenario: any = undefined;
- 
-try {
-  const result = useScenario();
-  scenario = result?.scenario;
-} catch {
-  scenario = undefined;
-}
-
-  
+  const { incoming } = usePlayerTrades()
+  const scenarioContext = useScenarioOptional()
+  const scenario = scenarioContext?.scenario
+  const { pathname } = useLocation()
+  const isMarketPage = pathname === '/trades'
 
   const [inputText, setInputText] = useState('')
   const [reaction, setReaction] = useState<LowResourceGameReaction | TradeGameReaction | EventGameReaction | null>(null)
@@ -36,15 +26,13 @@ try {
 
     setIsProcessing(true)
 
-    let incomingTradesText = "";
-    if(trades){
-      trades.incoming.forEach((trade) => {
-        const giveJson = JSON.stringify(trade.youGive);
-        incomingTradesText += `Trade ${trade.id}: From ${trade.fromName} | ${trade.side} ${trade.quantity} ${trade.resource} | You Give: ${giveJson}\n`;
-      });
-    }
-    if(incomingTradesText){tradeOffer = `CURRENT INCOMING TRADES:\n${incomingTradesText}`}
-      
+        const incomingTradesText = incoming.map((trade) =>
+      `Trade ${trade.id}: From ${trade.fromName} offers ${JSON.stringify(trade.youReceive)} for ${JSON.stringify(trade.youGive)}`
+    ).join('\n')
+    const tradeOffer = incomingTradesText
+      ? `CURRENT INCOMING TRADES:\n${incomingTradesText}`
+      : undefined
+    
 
     if(scenario){
       let allOptions = "";
@@ -57,7 +45,7 @@ try {
       } else {incomingEvent = undefined}
 
     try {
-      const aiResponse = await askResourceAI(inputText, resources, undefined, tradeOffer, incomingEvent)
+      const aiResponse = await askResourceAI(inputText, resources, undefined, tradeOffer, incomingEvent, isMarketPage)
       setReaction(aiResponse)
     } catch (err) {
       console.error('AI transmission error:', err)

@@ -313,9 +313,13 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useScenario(): ScenarioContextValue {
-  const ctx = useContext(ScenarioContext)
+  const ctx = useScenarioOptional()
   if (!ctx) {
     throw new Error('useScenario must be used within a ScenarioProvider')
   }
   return ctx
+}
+
+export function useScenarioOptional(): ScenarioContextValue | null {
+  return useContext(ScenarioContext)
 }
