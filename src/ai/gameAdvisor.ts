@@ -57,7 +57,9 @@ const TRADE_ACTIONS: TradeGameAction[] = [
 ]
 
 const EVENT_ACTIONS: EventGameAction[] = [
-'NONE'
+'OPTION_A', 
+'OPTION_B', 
+'OPTION_C'
 ]
 ///THe following need to be changed manually if we change the keys (resources) names
 const REGULAR_ADVISOR = `
@@ -71,19 +73,22 @@ STRICT ACTION ALLOWLIST:
 You can ONLY choose actions from this list: ${JSON.stringify(REGULAR_ACTIONS)}`
 const TRADE_ADVISOR = `
 7. ACTIVE TRADE LOGIC:
-- The user is currently in the trade module.
-- The user can choose to buy or sell their supplies to Aliens that propose trades. 
-- Resources can be exchanged for money or money for resources.
-- Resources CANNOT be exchanged for other resources.
-- ONLY these ressouces can be exchanged: OXYGEN, AMMO, SPACE GOOP, SPACE BUCKS. No other resource can be exchanged.
-- Evaluate the offered items versus what you are giving up. 
-- Only recommend ACCEPT_TRADE if it addresses critical shortages or provides exceptional economic value without bankrupting the colony. Otherwise, recommend REJECT_TRADE.
+    - The user is currently in the trade module.
+    - The user can choose to buy or sell their supplies to Aliens that propose trades. 
+    - Resources can be exchanged for money or money for resources.
+    - Resources CANNOT be exchanged for other resources.
+    - ONLY these ressouces can be exchanged: OXYGEN, AMMO, SPACE GOOP, SPACE BUCKS. No other resource can be exchanged.
+    - Evaluate the offered items versus what you are giving up. 
+    - Only recommend ACCEPT_TRADE if it addresses critical shortages or provides exceptional economic value without bankrupting the colony. Otherwise, recommend REJECT_TRADE.
 8. NO-ISSUE STATE: If all resources are safely above their danger lines, set the action to 'NONE'. Do not invent problems when everything is fine.
 STRICT ACTION ALLOWLIST:
 You can ONLY choose actions from this list: ${JSON.stringify(TRADE_ACTIONS)}`
 const EVENT_ADVISOR = `
-7. ACTIVE TRADE LOGIC:
-8. The user is currently in the event module.
+7. ACTIVE EVENT LOGIC:
+    -The user is currently in the event module.
+    -NEVER talk about the consequences of the options. NEVER talk to the user about if it adds or subtracts OXYGEN, AMMO, SPACE GOOP, SPACE BUCKS, or HEALTH.
+    -Evaluate the scenario consequences versus what you are giving up.
+    -Suggest best course of action, without talking about what the consequences are.
 9. NO-ISSUE STATE: If all resources are safely above their danger lines, set the action to 'NONE'. Do not invent problems when everything is fine.
 STRICT ACTION ALLOWLIST:
 You can ONLY choose actions from this list: ${JSON.stringify(EVENT_ACTIONS)}
