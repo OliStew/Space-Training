@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   advanceDay,
+  BIOMASS_STARVATION_HEALTH_DRAIN,
   calcDayTime,
   calculateHealthRegen,
+  calculateStarvationHealthDrain,
   checkGameOutcome,
   continueAfterVictory,
   DAY_DURATION_SECONDS,
@@ -12,6 +14,7 @@ import {
   initialState,
   isHealthRegenerating,
   MAX_HEALTH,
+  OXYGEN_STARVATION_HEALTH_DRAIN,
   resetGameState,
   setDay,
   setGameTime,
@@ -292,5 +295,76 @@ describe('Base Health Regeneration System', () => {
     expect(regenCap).toBeCloseTo(1)
   })
 })
+
+describe('Health Depletion on Zero Biomass / Oxygen (Starvation & Hypoxia)', () => {
+  it('has oxygen drain configured faster than biomass drain', () => {
+    expect(OXYGEN_STARVATION_HEALTH_DRAIN).toBe(1.0)
+    expect(BIOMASS_STARVATION_HEALTH_DRAIN).toBe(0.5)
+    expect(OXYGEN_STARVATION_HEALTH_DRAIN).toBeGreaterThan(BIOMASS_STARVATION_HEALTH_DRAIN)
+  })
+
+  it('depletes health by 1.0%/s when oxygen is 0 and biomass is positive', () => {
+    let s = initialState(0)
+    s = { ...s, resources: { ...s.resources, health: 100, oxygen: 0, biomass: 80 } }
+
+    // 1-second tick
+    const next1 = tick(s, 1000)
+    expect(next1.resources.health).toBeCloseTo(99.0, 2)
+
+    // 5-second tick
+    const next5 = tick(s, 5000)
+    expect(next5.resources.health).toBeCloseTo(95.0, 2)
+  })
+
+  it('depletes health by 0.5%/s when biomass is 0 and oxygen is positive', () => {
+    let s = initialState(0)
+    s = { ...s, resources: { ...s.resources, health: 100, oxygen: 80, biomass: 0 } }
+
+    // 1-second tick
+    const next1 = tick(s, 1000)
+    expect(next1.resources.health).toBeCloseTo(99.5, 2)
+
+    // 10-second tick
+    const next10 = tick(s, 10000)
+    expect(next10.resources.health).toBeCloseTo(95.0, 2)
+  })
+
+  it('depletes health by 1.5%/s when both oxygen and biomass are 0', () => {
+    let s = initialState(0)
+    s = { ...s, resources: { ...s.resources, health: 100, oxygen: 0, biomass: 0 } }
+
+    // 1-second tick: 1.0% (O2) + 0.5% (Bio) = 1.5%
+    const next1 = tick(s, 1000)
+    expect(next1.resources.health).toBeCloseTo(98.5, 2)
+
+    // 10-second tick: 15% lost (100 -> 85)
+    const next10 = tick(s, 10000)
+    expect(next10.resources.health).toBeCloseTo(85.0, 2)
+  })
+
+  it('stops at 0% health and triggers defeat outcome', () => {
+    let s = initialState(0)
+    s = { ...s, resources: { ...s.resources, health: 2, oxygen: 0, biomass: 0 } }
+
+    // 5 seconds will drain 7.5%, but health clamps at 0
+    const deadState = tick(s, 5000)
+    expect(deadState.resources.health).toBe(0)
+    expect(checkGameOutcome(deadState)).toBe('defeat')
+  })
+
+  it('calculates mid-tick depletion accurately with calculateStarvationHealthDrain()', () => {
+    // Depletion rates: oxygen 0.1/s, biomass 0.05/s
+    const depletion = { oxygen: 0.1, biomass: 0.05 }
+
+    // Oxygen starts at 0.5. At 0.1/s, it hits 0 after 5s.
+    // In a 10s tick, oxygen is 0 for the last 5 seconds -> 5s * 1.0%/s = 5% health drain.
+    // Biomass starts at 10.0, never hits 0 in 10s -> 0% drain.
+    const drain = calculateStarvationHealthDrain(10.0, 0.5, depletion, 10)
+    expect(drain.oxygenDrain).toBeCloseTo(5.0)
+    expect(drain.biomassDrain).toBe(0)
+    expect(drain.totalDrain).toBeCloseTo(5.0)
+  })
+})
+
 
 

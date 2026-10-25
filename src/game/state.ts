@@ -131,14 +131,17 @@ export function canAfford(state: GameState, cost: Delta): boolean {
   return RESOURCE_KEYS.every((k) => (cost[k] ?? 0) <= state.resources[k] + 1e-9)
 }
 
-/** Add `delta` to the holdings (money is kept to the cent). Never goes below zero. */
+/** Add `delta` to the holdings (money is kept to the cent, health capped at 100). Never goes below zero. */
 export function applyDelta(state: GameState, delta: Delta, sign: 1 | -1 = 1): GameState {
   const resources = { ...state.resources }
   for (const k of RESOURCE_KEYS) {
     const change = (delta[k] ?? 0) * sign
     if (change === 0) continue
     const next = resources[k] + change
-    resources[k] = Math.max(0, k === 'money' ? round2(next) : next)
+    resources[k] = Math.max(
+      0,
+      k === 'money' ? round2(next) : k === 'health' ? Math.min(MAX_HEALTH, next) : next,
+    )
   }
   return { ...state, resources }
 }
@@ -158,6 +161,61 @@ export const HEALTH_REGEN_RATE = 1.0 / HEALTH_REGEN_INTERVAL_SECONDS
 export const HEALTH_REGEN_THRESHOLD = 50
 /** Maximum colony base health percentage (100%). */
 export const MAX_HEALTH = 100
+
+// ---- Starvation & Oxygen Deprivation (Health Drain) -------------------------
+
+/** Health drain per second when oxygen is 0 (asphyxiation). Depletes faster than biomass. */
+export const OXYGEN_STARVATION_HEALTH_DRAIN = 1.0 // 1.0% / second
+
+/** Health drain per second when biomass is 0 (food starvation). */
+export const BIOMASS_STARVATION_HEALTH_DRAIN = 0.5 // 0.5% / second
+
+/**
+ * Calculates health drain when oxygen and/or biomass reach 0.
+ * Oxygen depletes health at 1.0%/sec (faster); biomass depletes health at 0.5%/sec.
+ */
+export function calculateStarvationHealthDrain(
+  initialBiomass: number,
+  initialOxygen: number,
+  depletion: Record<DepletingKey, number>,
+  seconds: number,
+): { totalDrain: number; oxygenDrain: number; biomassDrain: number } {
+  if (seconds <= 0) return { totalDrain: 0, oxygenDrain: 0, biomassDrain: 0 }
+
+  // 1. Oxygen zero duration
+  let oxygenZeroSeconds = 0
+  if (initialOxygen <= 0) {
+    oxygenZeroSeconds = seconds
+  } else {
+    const oxyRate = depletion.oxygen ?? 0
+    if (oxyRate > 0) {
+      const timeToZero = initialOxygen / oxyRate
+      if (timeToZero < seconds) {
+        oxygenZeroSeconds = seconds - timeToZero
+      }
+    }
+  }
+
+  // 2. Biomass zero duration
+  let biomassZeroSeconds = 0
+  if (initialBiomass <= 0) {
+    biomassZeroSeconds = seconds
+  } else {
+    const bioRate = depletion.biomass ?? 0
+    if (bioRate > 0) {
+      const timeToZero = initialBiomass / bioRate
+      if (timeToZero < seconds) {
+        biomassZeroSeconds = seconds - timeToZero
+      }
+    }
+  }
+
+  const oxygenDrain = oxygenZeroSeconds * OXYGEN_STARVATION_HEALTH_DRAIN
+  const biomassDrain = biomassZeroSeconds * BIOMASS_STARVATION_HEALTH_DRAIN
+  const totalDrain = oxygenDrain + biomassDrain
+
+  return { totalDrain, oxygenDrain, biomassDrain }
+}
 
 /** Check whether health is currently actively regenerating. */
 export function isHealthRegenerating(resources: Record<string, number>): boolean {
@@ -192,7 +250,7 @@ export function calculateHealthRegen(
   return Math.min(MAX_HEALTH - health, validSeconds * HEALTH_REGEN_RATE)
 }
 
-/** Drain biomass and oxygen for the time elapsed, regenerate base health if eligible, then pay out any market trades that have arrived. */
+/** Drain biomass and oxygen for the time elapsed, regenerate or deplete base health, then pay out any market trades that have arrived. */
 export function tick(state: GameState, now: number): GameState {
   let next = state
   const seconds = (now - state.lastTick) / 1000
@@ -202,7 +260,7 @@ export function tick(state: GameState, now: number): GameState {
       resources[k] = Math.max(0, resources[k] - state.depletion[k] * seconds)
     }
 
-    // Health regenerates 1% per second when biomass and oxygen are both above 50
+    // Health regenerates 1% per 5s (0.2%/s) when biomass and oxygen are both above 50
     const regen = calculateHealthRegen(
       state.resources.health,
       state.resources.biomass,
@@ -212,6 +270,17 @@ export function tick(state: GameState, now: number): GameState {
     )
     if (regen > 0) {
       resources.health = Math.min(MAX_HEALTH, resources.health + regen)
+    }
+
+    // Health drains if oxygen or biomass reach 0 (Oxygen drains faster than biomass)
+    const { totalDrain } = calculateStarvationHealthDrain(
+      state.resources.biomass,
+      state.resources.oxygen,
+      state.depletion,
+      seconds,
+    )
+    if (totalDrain > 0 && resources.health > 0) {
+      resources.health = Math.max(0, resources.health - totalDrain)
     }
 
     next = { ...state, resources, gameTime: state.gameTime + seconds, lastTick: now }
