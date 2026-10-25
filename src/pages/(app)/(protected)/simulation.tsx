@@ -8,6 +8,8 @@ import { useGame } from '@/game/GameProvider'
 import { DEPLETING_KEYS } from '@/game/state'
 import { RESOURCE_KEYS } from '@/shared/types'
 import { fmt, LABELS } from '@/components/trading/format'
+import { ScenarioPanel } from '@/components/trading/ScenarioPanel'
+import {ResourcesPanel} from "@/components/trading/ResourcesPanel";
 
 export default function SimulationPage() {
   const { state } = useGame()
@@ -18,6 +20,8 @@ export default function SimulationPage() {
       <h1>Simulation</h1>
 
       <hr />
+        <ResourcesPanel />
+        <hr />
       <h2>Resource Depletion</h2>
       <pre>
         {DEPLETING_KEYS.map((k) => {
@@ -31,14 +35,8 @@ export default function SimulationPage() {
       </pre>
 
       <hr />
-      <h2>All Resources</h2>
-      <pre>
-        {RESOURCE_KEYS.map((k) => {
-          const val = state.resources[k]
-          return `  ${LABELS[k]}: ${k === 'money' ? `$${fmt(val)}` : fmt(val, 1)}\n`
-        })}
-        Total: ${RESOURCE_KEYS.reduce((s, k) => s + state.resources[k], 0).toLocaleString()}
-      </pre>
+        <ScenarioPanel />
     </div>
+
   )
 }
