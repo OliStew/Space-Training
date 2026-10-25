@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDebugResources } from '@/game'
 import { useTextToSpeech } from '@/lib/tts'
 import { streamGenerate, streamTextSmoothly } from '@/lib/generate'
@@ -91,10 +91,31 @@ export function ScenarioPanel() {
   const [aiOutcome, setAiOutcome] = useState<string | null>(null)
   const [isGeneratingOutcome, setIsGeneratingOutcome] = useState(false)
   const [autoRead, setAutoRead] = useState(false)
+  const [countdown, setCountdown] = useState<number | null>(null)
 
   // Track the scenario ID to avoid duplicate auto-reads on re-renders
   const lastReadIdRef = useRef<number | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const clearTimers = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+  }, [])
+
+  // Clear timers on unmount
+  useEffect(() => {
+    return () => {
+      clearTimers()
+    }
+  }, [clearTimers])
 
   useEffect(() => {
     if (!scenario || !autoRead) return
@@ -108,24 +129,49 @@ export function ScenarioPanel() {
     })
   }, [scenario, autoRead, speak])
 
-  const nextRandomScenario = () => {
+  const nextRandomScenario = useCallback(() => {
+    clearTimers()
+    setCountdown(null)
     if (allScenarios.length === 0) return
     stop()
     abortRef.current?.abort()
     abortRef.current = null
 
-    let next = scenario
-    if (allScenarios.length > 1) {
-      while (next.id === scenario?.id) {
+    setScenario((current) => {
+      if (allScenarios.length <= 1) return current
+      let next = current
+      while (next.id === current.id) {
         next = allScenarios[Math.floor(Math.random() * allScenarios.length)]
       }
-    }
-    setScenario(next)
+      return next
+    })
     setFeedback(null)
     setAiOutcome(null)
     setIsGeneratingOutcome(false)
     setInputText('')
-  }
+  }, [clearTimers, stop])
+
+  const startNextScenarioCountdown = useCallback(() => {
+    clearTimers()
+    setCountdown(15)
+
+    intervalRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev === null || prev <= 1) {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current)
+            intervalRef.current = null
+          }
+          return null
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    timerRef.current = setTimeout(() => {
+      nextRandomScenario()
+    }, 15000)
+  }, [clearTimers, nextRandomScenario])
 
   const applyEffect = (resourceKey: 'biomass' | 'ammo' | 'oxygen' | 'health', delta: number) => {
     if (delta > 0) {
@@ -136,6 +182,7 @@ export function ScenarioPanel() {
   }
 
   const handleChooseOption = async (opt: ScenarioOption) => {
+    if (isGeneratingOutcome || countdown !== null) return
     stop()
     const changes: string[] = []
     if (opt.effects) {
@@ -228,11 +275,15 @@ export function ScenarioPanel() {
     if (autoRead && narrative && !controller.signal.aborted) {
       speak(narrative).catch(() => {})
     }
+
+    if (!controller.signal.aborted) {
+      startNextScenarioCountdown()
+    }
   }
 
   const handleTextSubmit = () => {
     const query = inputText.trim().toLowerCase()
-    if (!query || !scenario || isGeneratingOutcome) return
+    if (!query || !scenario || isGeneratingOutcome || countdown !== null) return
 
     // 1. Exact match on key ("a", "b", "c", "option a", etc.)
     let matched = scenario.options.find(
@@ -282,7 +333,7 @@ export function ScenarioPanel() {
         {scenario.options.map((opt) => (
           <li key={opt.key}>
             <button
-              disabled={isGeneratingOutcome}
+              disabled={isGeneratingOutcome || countdown !== null}
               onClick={() => void handleChooseOption(opt)}
             >
               Option {opt.key}: {opt.label}
@@ -294,18 +345,24 @@ export function ScenarioPanel() {
         <input
           type="text"
           size={35}
-          placeholder="Enter command or option..."
+          placeholder={
+            countdown !== null
+              ? `Next scenario in ${countdown}s...`
+              : 'Enter command or option...'
+          }
           value={inputText}
-          disabled={isGeneratingOutcome}
+          disabled={isGeneratingOutcome || countdown !== null}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleTextSubmit()
           }}
         />{' '}
-        <button disabled={isGeneratingOutcome} onClick={handleTextSubmit}>
+        <button
+          disabled={isGeneratingOutcome || countdown !== null}
+          onClick={handleTextSubmit}
+        >
           Submit
         </button>{' '}
-        <button onClick={nextRandomScenario}>New Scenario</button>{' '}
         {isPlaying ? (
           <button onClick={stop}>Stop Voice</button>
         ) : (
@@ -333,7 +390,7 @@ export function ScenarioPanel() {
 
       {isGeneratingOutcome && (
         <p style={{ fontStyle: 'italic', color: '#888' }}>
-          Generating aftermath narrative from DeepSpace AI...
+          Generating aftermath narrative...
         </p>
       )}
 
@@ -350,6 +407,12 @@ export function ScenarioPanel() {
           <strong>Aftermath:</strong>
           <p style={{ margin: '6px 0 0', lineHeight: 1.5 }}>{aiOutcome}</p>
         </div>
+      )}
+
+      {countdown !== null && (
+        <p style={{ fontStyle: 'italic', color: '#888' }}>
+          Next scenario arriving in {countdown}s...
+        </p>
       )}
 
       {ttsError && <p style={{ color: 'red' }}>Voice Error: {ttsError}</p>}
