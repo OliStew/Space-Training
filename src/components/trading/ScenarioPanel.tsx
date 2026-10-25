@@ -90,9 +90,10 @@ export function ScenarioPanel({ onNewScenario }: { onNewScenario?: (scenario: Sc
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          gap: 8,
         }}
       >
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
           <Badge kind="out">CRISIS EVENT</Badge>
           <strong style={{ color: 'var(--hi)', letterSpacing: '0.04em' }}>
             {scenario.name.toUpperCase()}
@@ -169,7 +170,7 @@ export function ScenarioPanel({ onNewScenario }: { onNewScenario?: (scenario: Sc
       )}
 
       {/* Voice controls */}
-      <div style={{ display: 'flex', gap: 14, alignItems: 'center', margin: '6px 0 12px', fontSize: '11px' }}>
+      <div style={{ display: 'flex', gap: '8px 14px', flexWrap: 'wrap', alignItems: 'center', margin: '6px 0 12px', fontSize: '11px' }}>
         <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
           <input
             type="checkbox"
@@ -240,7 +241,7 @@ export function ScenarioPanel({ onNewScenario }: { onNewScenario?: (scenario: Sc
             background: 'rgba(0,0,0,0.5)',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6, marginBottom: 4 }}>
             <span style={{ fontWeight: 700, color: 'var(--hi)', letterSpacing: '0.08em' }}>
               AFTERMATH TELEMETRY:
             </span>

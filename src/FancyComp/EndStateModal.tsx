@@ -22,9 +22,8 @@ export function EndStateModal() {
         backdropFilter: 'blur(4px)',
         zIndex: 9999,
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 20,
+        overflowY: 'auto',
+        padding: 12,
       }}
       role="dialog"
       aria-modal="true"
@@ -34,6 +33,7 @@ export function EndStateModal() {
         className="rc-win"
         style={{
           width: 'min(640px, 100%)',
+          margin: 'auto',
           borderColor: isVictory ? 'var(--hi)' : '#ff4d4d',
           boxShadow: isVictory
             ? '0 0 50px rgba(74, 246, 38, 0.35)'

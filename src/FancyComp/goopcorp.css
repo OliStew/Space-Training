@@ -113,12 +113,67 @@
 .rc-center{flex:1;display:flex;align-items:center;justify-content:center;padding:20px}
 .rc-center .rc-win{width:min(640px,100%)}
 
+/* Market quote rows: name, then BUY / SELL columns */
+.rc-row.rc-quote{flex-wrap:nowrap;gap:12px}
+.rc-quote>.rc-q-name{flex:0 0 90px;min-width:0}
+.rc-quote>.rc-q-side{flex:1 1 0;min-width:0;display:flex;align-items:baseline;justify-content:flex-end;gap:6px;white-space:nowrap}
+.rc-q-side small{font-size:10px;letter-spacing:.1em;opacity:.7}.rc-q-side b{color:var(--hi)}
+.rc-q-side em{font-style:normal;font-size:10px;overflow:hidden;text-overflow:ellipsis}
+
 @media (max-width:859px){
-  .rc-main{flex-direction:column;overflow-y:auto;gap:20px}
-  .rc-grid{grid-template-columns:repeat(4,1fr)}.rc-root .rc-nav{width:100%;height:auto;aspect-ratio:1}.rc-nav .l{display:none}
-  .rc-railmeta,.rc-root .rc-agent-btn{width:100%}.rc-line{display:none}
-  .rc-agent{left:12px;right:12px;width:auto;bottom:84px}.rc-brand span,.rc-ticker-end .rc-badge{display:none}
+  .rc-root{height:100vh;height:100dvh;bottom:auto;font-size:14px;-webkit-text-size-adjust:100%}
+  .rc-ticker{height:40px}
+  .rc-brand span,.rc-ticker-end .rc-badge{display:none}.rc-brand{padding:0 12px}.rc-ticker-end{padding:0 10px;gap:8px;font-size:11px}
+  /* Window fills the screen; navigation becomes a thumb-reach bar at the bottom. */
+  .rc-main{flex-direction:column;overflow:hidden;gap:14px;padding:10px 10px calc(10px + env(safe-area-inset-bottom))}
+  .rc-win-main{order:1;flex:1 1 0;min-height:0}
+  .rc-rail{order:2;flex:none;flex-direction:column-reverse;gap:10px}
+  .rc-railmeta{display:none}
+  .rc-grid{grid-template-columns:repeat(6,1fr);gap:8px}
+  .rc-root .rc-nav{width:100%;height:auto;min-height:48px;aspect-ratio:1;box-shadow:2px 2px 0 var(--dim)}
+  .rc-nav .l,.rc-nav .n{display:none}.rc-nav svg{width:46%;height:46%}
+  .rc-nav::before,.rc-nav::after{width:6px;height:6px;top:-4px;left:-4px}.rc-nav::after{top:auto;left:auto;right:-4px;bottom:-4px}
+  .rc-root .rc-agent-btn{width:100%;height:44px}.rc-line{display:none}
+  .rc-titlebar{padding-left:10px}.rc-titlebar .t small{display:none}
+  .rc-titlebar>.rc-muted{display:none}
+  .rc-titlebar .t b{font-size:13px;letter-spacing:.04em}
+  .rc-body{padding:12px;gap:12px}
+  .rc-panel{padding:10px}
+  .rc-root h1{font-size:20px}
+  .rc-center{overflow-y:auto;align-items:flex-start;padding:16px}.rc-center .rc-win{margin:auto}
+  .rc-win::before,.rc-win::after{width:18px;height:18px}.rc-win::before{top:-4px;left:-4px}.rc-win::after{right:-4px;bottom:-4px}
+  /* Touch targets; 16px inputs stop iOS zooming the page on focus. */
+  .rc-root button{min-height:40px;padding:6px 14px;font-size:12px}
+  .rc-root .rc-x{min-height:0;width:44px}
+  .rc-root input,.rc-root select,.rc-root textarea{font-size:16px;min-height:40px;max-width:100%}
+  .rc-root input[type=checkbox]{width:22px;height:22px;min-height:0}
+  .rc-row>span{min-width:140px}.rc-row>input[type=number]{width:90px!important}
+  .rc-tiles{grid-template-columns:repeat(2,1fr)}.rc-tile b{font-size:15px}
+  .rc-form{grid-template-columns:1fr}.rc-form>*{min-width:0}.rc-form input,.rc-form select{width:100%}
+  .rc-row{min-width:0;overflow-wrap:anywhere}
+  .rc-tabs button{flex:1 1 auto}
+  /* CORA AI opens as a near-full-screen sheet. */
+  .rc-agent{left:8px;right:8px;top:48px;bottom:calc(8px + env(safe-area-inset-bottom));width:auto;height:auto}
+  .rc-agent-body{padding:6px}
+  .rc-popups{top:48px;right:8px;left:8px;width:auto}
 }
+@media (max-width:859px){
+  .rc-row.rc-quote{display:grid;grid-template-columns:1fr 1fr;gap:2px 12px}
+  .rc-quote>.rc-q-name{grid-column:1/-1;flex:none;font-weight:700;color:var(--hi)}
+  .rc-quote>.rc-q-side{flex-wrap:wrap;justify-content:flex-start;white-space:normal;gap:2px 6px}
+  .rc-quote>.rc-q-side em{flex-basis:100%}
+  /* Buy/sell order rows: label on top, qty + two buttons underneath */
+  .rc-row.rc-order{display:grid;grid-template-columns:84px 1fr 1fr;gap:8px;align-items:stretch}
+  .rc-order>span{grid-column:1/-1;min-width:0}
+  .rc-order>input[type=number]{width:100%!important}
+  .rc-order>button{padding:6px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* Trailing buttons in generic rows share a line instead of orphaning */
+  .rc-row>button{flex:1 1 0}
+  .rc-panel-head{flex-wrap:wrap}.rc-panel-head h2{font-size:14px}
+  .rc-ticker-end>span{white-space:nowrap}
+  .rc-root pre{overflow-wrap:anywhere}
+}
+@media (max-width:420px){.rc-form{grid-template-columns:1fr}.rc-root .rc-nav{min-height:44px}}
 @media (prefers-reduced-motion:reduce){.rc-root *{animation-duration:.01ms!important}}
 
 /* Pop-up notifications (new scenario / incoming attack) */

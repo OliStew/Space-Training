@@ -74,7 +74,7 @@ function MarketsSection({ net, engine, error, success, state }: { net: any; engi
         const valid = Number.isInteger(n) && n >= 1
         const total = (unit: number) => (valid ? ` $${fmt(Math.round(unit * n * 100) / 100)}` : '')
         return (
-        <div className="rc-row" key={k}>
+        <div className="rc-row rc-order" key={k}>
           <span>{LABELS[k]}: buy {fmt(market.prices[k]!.buy)} / sell {fmt(market.prices[k]!.sell)}</span>
           <input type="number" min="1" value={qty[k] ?? '1'} onChange={(e) => setQty({ ...qty, [k]: e.target.value })} style={{ width: 70 }} aria-label={`${LABELS[k]} quantity`} />
           <button type="button" disabled={busy} onClick={() => trade('buy', k)}>BUY (−{total(market.prices[k]!.buy).trim() || '—'})</button>

@@ -59,7 +59,7 @@ const resources = useResources()
 
   return (
     <section style={{
-      padding: '24px',
+      padding: 'clamp(12px, 4vw, 24px)',
       background: 'var(--bg)',
       color: 'var(--main)',
       fontFamily: 'Courier New, Courier, monospace',
@@ -130,6 +130,8 @@ const resources = useResources()
           disabled={isProcessing}
           style={{
             flexGrow: 1,
+            minWidth: 0,
+            fontSize: 16,
             padding: '12px',
             background: 'var(--bg)',
             border: '1px solid var(--dim)',
@@ -142,7 +144,7 @@ const resources = useResources()
           type="submit"
           disabled={isProcessing}
           style={{
-            padding: '12px 24px',
+            padding: '12px 16px',
             background: 'var(--main)',
             color: 'var(--bg)',
             border: '1px solid var(--main)',

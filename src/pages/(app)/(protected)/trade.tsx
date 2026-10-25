@@ -55,11 +55,10 @@ export default function DashboardPage() {
               {net.nextUpdateAt && <> Updates in {seconds(net.nextUpdateAt - serverNow)}s.</>}
             </p>
             {bestPrices.map(({ key, bestBuy, bestSell }) => (
-              <div className="rc-row" key={key}>
-                <span style={{ flex: '0 0 auto', minWidth: 90 }}>{LABELS[key]}</span>
-                <span style={{ flex: '1 1 0', textAlign: 'right' }}>
-                  buy {fmt(bestBuy.buy)} <span className="rc-muted">({bestBuy.name})</span> / sell {fmt(bestSell.sell)} <span className="rc-muted">({bestSell.name})</span>
-                </span>
+              <div className="rc-row rc-quote" key={key}>
+                <span className="rc-q-name">{LABELS[key]}</span>
+                <span className="rc-q-side"><small>BUY</small><b>{fmt(bestBuy.buy)}</b><em className="rc-muted">{bestBuy.name}</em></span>
+                <span className="rc-q-side"><small>SELL</small><b>{fmt(bestSell.sell)}</b><em className="rc-muted">{bestSell.name}</em></span>
               </div>
             ))}
           </>
