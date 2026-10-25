@@ -27,7 +27,10 @@ export interface LowResourceGameReaction {
 }
 
 
-export type EventGameAction ='NONE'; 
+export type EventGameAction =
+'OPTION A'
+| 'OPTION B'
+| 'OPTION C'; 
 export interface EventRecommendation{
   stepNumber: number;
   action: EventGameAction; // The AI MUST pick from your premade list

@@ -18,16 +18,74 @@
  *  useDebugResources() add()/remove() any resource (temporary cheat buttons)
  */
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useGame, useNow } from './GameProvider'
-import { applyDelta, DEPLETING_KEYS, PLAYER_TRADABLE_KEYS, setDepletion, setGameTime } from './state'
-import type { DepletingKey, HistoryEntry } from './state'
+import {
+  advanceDay,
+  applyDelta,
+  calcDayTime,
+  calculateHealthRegen,
+  checkGameOutcome,
+  continueAfterVictory,
+  DAY_DURATION_SECONDS,
+  DEPLETING_KEYS,
+  HEALTH_REGEN_INTERVAL_SECONDS,
+  HEALTH_REGEN_RATE,
+  HEALTH_REGEN_THRESHOLD,
+  isHealthRegenerating,
+  MAX_HEALTH,
+  PLAYER_TRADABLE_KEYS,
+  resetGameState,
+  setDay,
+  setDepletion,
+  setGameTime,
+  VICTORY_DAY_THRESHOLD,
+} from './state'
+import type {
+  DayCycle,
+  DayPhase,
+  DayTimeInfo,
+  DepletingKey,
+  GameOutcome,
+  HistoryEntry,
+} from './state'
 import { tradeLegs } from '../shared/trade-book'
 import type { Delta, MarketEntry, OrderReceipt, ResourceKey, TradableKey, Trade, TradeRequestInput } from '../shared/types'
 
 export { RESOURCE_KEYS, TRADE_TTL_MS } from '../shared/types'
-export { DEPLETING_KEYS, PLAYER_TRADABLE_KEYS }
-export type { Delta, DepletingKey, HistoryEntry, MarketEntry, OrderReceipt, ResourceKey, TradableKey, TradeRequestInput }
+export {
+  advanceDay,
+  calcDayTime,
+  calculateHealthRegen,
+  checkGameOutcome,
+  continueAfterVictory,
+  DAY_DURATION_SECONDS,
+  DEPLETING_KEYS,
+  HEALTH_REGEN_INTERVAL_SECONDS,
+  HEALTH_REGEN_RATE,
+  HEALTH_REGEN_THRESHOLD,
+  isHealthRegenerating,
+  MAX_HEALTH,
+  PLAYER_TRADABLE_KEYS,
+  resetGameState,
+  setDay,
+  setGameTime,
+  VICTORY_DAY_THRESHOLD,
+}
+export type {
+  DayCycle,
+  DayPhase,
+  DayTimeInfo,
+  Delta,
+  DepletingKey,
+  GameOutcome,
+  HistoryEntry,
+  MarketEntry,
+  OrderReceipt,
+  ResourceKey,
+  TradableKey,
+  TradeRequestInput,
+}
 
 // ---- Resources --------------------------------------------------------------
 
@@ -39,9 +97,39 @@ export function useResources(): Record<VisibleResourceKey, number> {
   return visible
 }
 
+// ---- Day and Time System --------------------------------------------------------
+
+export interface DayTime extends DayTimeInfo {
+  /** Set total game time in seconds. */
+  setTime: (seconds: number) => void
+  /** Jump to a specific day number (e.g. `setDay(2)`). */
+  setDay: (day: number, keepTimeOfDay?: boolean) => void
+  /** Fast-forward to 00:00 of the next day. */
+  advanceDay: () => void
+}
+
+/**
+ * Access the 120-second day and 24-hour time system anywhere in the project.
+ * Returns day number, formatted time, hour/minute/second, phase, and controls.
+ */
+export function useDayTime(): DayTime {
+  const { state, store } = useGame()
+  const info = useMemo(() => calcDayTime(state.gameTime), [state.gameTime])
+  const setTime = useCallback((seconds: number) => store.update((s) => setGameTime(s, seconds)), [store])
+  const setDayAction = useCallback((day: number, keepTime?: boolean) => store.update((s) => setDay(s, day, keepTime)), [store])
+  const advanceDayAction = useCallback(() => store.update((s) => advanceDay(s)), [store])
+
+  return {
+    ...info,
+    setTime,
+    setDay: setDayAction,
+    advanceDay: advanceDayAction,
+  }
+}
+
 // ---- Game time ------------------------------------------------------------------
 
-export interface GameTime {
+export interface GameTime extends DayTime {
   /**
    * The game clock in seconds, e.g. 125.4. Starts at 0, ticks about once a
    * second, is saved with the player, and every component sees the same value.
@@ -53,8 +141,48 @@ export interface GameTime {
 }
 
 export function useGameTime(): GameTime {
+  const dayTime = useDayTime()
+  return {
+    ...dayTime,
+    seconds: dayTime.totalSeconds,
+    set: dayTime.setTime,
+  }
+}
+
+// ---- Game Outcome (End-State System) ----------------------------------------
+
+export interface GameOutcomeInfo {
+  outcome: GameOutcome
+  isVictory: boolean
+  isDefeat: boolean
+  isOver: boolean
+  resetGame: () => void
+  continueSimulation: () => void
+}
+
+/**
+ * Hook to access and respond to the simulation's end states (Victory / Defeat).
+ * - Victory occurs on reaching Day 30 of simulation.
+ * - Defeat occurs if colony base health reaches 0%.
+ */
+export function useGameOutcome(): GameOutcomeInfo {
   const { state, store } = useGame()
-  return { seconds: state.gameTime, set: (seconds) => store.update((s) => setGameTime(s, seconds)) }
+  const outcome = useMemo(() => checkGameOutcome(state), [state])
+  const resetGame = useCallback(() => {
+    store.update((s) => resetGameState(s, Date.now()))
+  }, [store])
+  const continueSimulation = useCallback(() => {
+    store.update((s) => continueAfterVictory(s))
+  }, [store])
+
+  return {
+    outcome,
+    isVictory: outcome === 'victory',
+    isDefeat: outcome === 'defeat',
+    isOver: outcome !== 'playing',
+    resetGame,
+    continueSimulation,
+  }
 }
 
 // ---- Depletion ----------------------------------------------------------------
