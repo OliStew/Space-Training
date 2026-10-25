@@ -4,38 +4,35 @@
  */
 
 import { signOut, useUser } from 'deepspace'
-import { Button } from '@/components/ui'
+import { Panel } from '@/FancyComp/parts' 
+import { setPrefs, usePrefs, type Theme } from '@/FancyComp/prefs'
+
+const THEMES: [Theme, string][] = [['green', 'GREEN PHOSPHOR'], ['amber', 'AMBER CLASSIC'], ['cyan', 'CYAN VECTOR'], ['white', 'MONOCHROME']]
 
 export default function SettingsPage() {
   const { user } = useUser()
+  const prefs = usePrefs()
 
-  return (
-    // No background on page wrappers — pages render into whatever the app's
-    // (app)/_layout provides (a plain background, or a raised panel), so they
-    // stay transparent and inherit it.
-    <div className="min-h-full text-foreground">
-      <div className="mx-auto max-w-2xl px-6 py-20">
-        <h1 className="mb-12 text-4xl font-bold tracking-tight">Settings</h1>
+return (
+    <>
+      <Panel title="YOUR ACCOUNT">
+        <div className="rc-row"><span className="rc-muted">NAME</span>{user?.name ?? '—'}</div>
+        <div className="rc-row"><span className="rc-muted">EMAIL</span>{user?.email ?? '—'}</div>
+        <p style={{ marginTop: 14 }}><button className="danger" onClick={() => signOut()}>SIGN OUT</button></p>
+      </Panel>
 
-        <section className="rounded-lg border border-border bg-card p-6">
-          <h2 className="mb-4 text-lg font-semibold">Your account</h2>
+      <Panel title="TERMINAL COLOR PALETTE">
+        <div className="rc-tabs">
+          {THEMES.map(([t, label]) => (
+            <button key={t} className={prefs.theme === t ? '' : 'ghost'} onClick={() => setPrefs({ theme: t })}>{label}</button>
+          ))}
+        </div>
+      </Panel>
 
-          <dl className="space-y-3 text-sm">
-            <div>
-              <dt className="text-muted-foreground">Name</dt>
-              <dd className="text-foreground">{user?.name ?? '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Email</dt>
-              <dd className="text-foreground">{user?.email ?? '—'}</dd>
-            </div>
-          </dl>
-
-          <Button variant="secondary" className="mt-6" onClick={() => signOut()}>
-            Sign out
-          </Button>
-        </section>
-      </div>
-    </div>
+      <Panel title="VISUAL & CRT CONTROLS">
+        <label className="rc-row"><span>Scanlines &amp; screen overlay</span><input type="checkbox" checked={prefs.scanlines} onChange={(e) => setPrefs({ scanlines: e.target.checked })} /></label>
+        <label className="rc-row"><span>CRT tube flicker</span><input type="checkbox" checked={prefs.flicker} onChange={(e) => setPrefs({ flicker: e.target.checked })} /></label>
+      </Panel>
+    </>
   )
 }
