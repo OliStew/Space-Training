@@ -18,6 +18,7 @@ export interface NavItem {
 export const nav: NavItem[] = [
   { path: '/trade', label: 'Dashboard' },
   { path: '/trades', label: 'Trades' },
+  { path: '/combat', label: 'Combat' },
   { path: '/simulation', label: 'Simulation' },
   { path: '/settings', label: 'Settings' },
   // The /api-status debug page still exists — add

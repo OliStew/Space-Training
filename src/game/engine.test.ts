@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { ackAttack, attacksFor, createAttack, defendAttack } from '../shared/combat'
 import { ApiError } from './api'
 import type { GameApi } from './api'
 import { TradingEngine } from './engine'
@@ -34,7 +35,7 @@ function fakeServer(clock: { now: number }) {
       },
       async syncTrades(p) {
         registerPlayer(book, userId, p.name, p.email, clock.now)
-        return { trades: tradesFor(book, userId, clock.now), serverTime: clock.now, players: playerNames(book, userId) }
+        return { trades: tradesFor(book, userId, clock.now), serverTime: clock.now, players: playerNames(book, userId), attacks: attacksFor(book, userId, clock.now) }
       },
       async sendTrade(id, trade) {
         const t = unwrap(createTrade(book, userId, trade, id, clock.now))
@@ -48,6 +49,9 @@ function fakeServer(clock: { now: number }) {
       declineTrade: async (id) => unwrap(declineTrade(book, userId, id, clock.now)),
       cancelTrade: async (id) => unwrap(cancelTrade(book, userId, id, clock.now)),
       ackTrade: async (id) => ackTrade(book, userId, id, clock.now),
+      attack: async (id, to, ammo) => unwrap(createAttack(book, userId, { to, ammo }, id, clock.now)),
+      defend: async (id, ammo) => unwrap(defendAttack(book, userId, id, ammo, clock.now)),
+      ackAttack: async (id) => ackAttack(book, userId, id, clock.now),
     }
     return api
   }
@@ -279,5 +283,36 @@ describe('player trades', () => {
     await a.alice.engine.syncTrades()
     await expect(a.alice.engine.sendTrade({ to: 'nobody', side: 'sell', resource: 'metal', quantity: 1, unitPrice: 1 })).rejects.toThrow(/No player/)
     expect(res(a.alice).metal).toBe(100)
+  })
+})
+
+describe('combat', () => {
+  it('attacker pays ammo, defender responds, damage lands once', async () => {
+    const { clock, alice, bob } = setup()
+    await bob.engine.syncTrades()
+    await alice.engine.syncTrades()
+    await alice.engine.attack('Bob', 20)
+    expect(res(alice).ammo).toBe(30)
+    await bob.engine.syncTrades()
+    expect(bob.engine.net.get().incomingAttacks).toHaveLength(1)
+    const id = bob.engine.net.get().incomingAttacks[0].id
+    await bob.engine.defend(id, 8) // needs 16 for full defense: (20 - 8 * 1.25) * 4 = 40 health lost
+    expect(res(bob).ammo).toBe(42)
+    expect(res(bob).health).toBe(60)
+    await bob.engine.syncTrades()
+    expect(res(bob).health).toBe(60)
+    await alice.engine.syncTrades()
+    expect(alice.engine.net.get().outgoingAttacks).toHaveLength(0)
+  })
+
+  it('an unanswered attack lands in full, and health never goes below zero', async () => {
+    const { clock, alice, bob } = setup()
+    await bob.engine.syncTrades()
+    await alice.engine.syncTrades()
+    await alice.engine.attack('Bob', 50)
+    clock.now += 31_000
+    await bob.engine.syncTrades()
+    await bob.engine.syncTrades()
+    expect(res(bob).health).toBe(0) // 50 * 4 = 200 damage against 100 health
   })
 })

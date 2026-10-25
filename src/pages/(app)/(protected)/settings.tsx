@@ -5,7 +5,7 @@
 
 import { useCallback, useState } from 'react'
 import { signOut, useUser } from 'deepspace'
-import { Badge, Panel } from '@/FancyComp/parts' 
+import { Badge, Panel } from '@/FancyComp/parts'
 import { setPrefs, usePrefs, type Theme } from '@/FancyComp/prefs'
 import { callAction } from '@/lib/actions'
 import { useDayTime, useDebugResources } from '@/game'

@@ -125,4 +125,31 @@ export interface TradeSyncResult {
   /** Trades the caller must still act on or settle (pending, or finished but un-acked). */
   trades: Trade[]
   serverTime: number
+  /** Attacks the caller must still act on or hear the outcome of (see Attack). */
+  attacks?: Attack[]
+}
+
+// ---- Combat -------------------------------------------------------------------
+
+/** Seconds a defender has to respond to an attack before it lands undefended. */
+export const ATTACK_ARRIVAL_TIME = 30
+
+export interface Attack {
+  id: string
+  from: string
+  fromName: string
+  to: string
+  toName: string
+  /** Ammo the attacker spent (already deducted from them). */
+  ammo: number
+  createdAt: number
+  /** The defender must respond by this server time. */
+  expiresAt: number
+  status: 'pending' | 'resolved'
+  /** Ammo the defender committed (0 if they never responded). Set when resolved. */
+  defenseAmmo?: number
+  /** Health the defender loses. Set when resolved. */
+  damage?: number
+  resolvedAt?: number
+  ackedBy: string[]
 }
