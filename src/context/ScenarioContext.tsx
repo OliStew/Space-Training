@@ -38,6 +38,8 @@ export type Scenario = {
   options: Option[]
 }
 
+export type ActiveScenario = Scenario
+
 /** Seconds player has to respond to a crisis event before it times out. */
 export const SCENARIO_RESPONSE_TIME_SECONDS = 30
 
@@ -131,6 +133,7 @@ export function matchOption(text: string, options: Option[]): Option | null {
 
 export interface ScenarioContextValue {
   scenario: Scenario
+  setScenario: React.Dispatch<React.SetStateAction<Scenario>>
   scenarios: Scenario[]
   options: Option[]
   feedback: string | null
@@ -411,6 +414,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
 
   const value: ScenarioContextValue = {
     scenario,
+    setScenario,
     scenarios: scenariosList,
     options: scenario.options,
     feedback: chosen ? `Selected "${chosen.label}"` : null,
@@ -449,3 +453,7 @@ export function useScenario(): ScenarioContextValue {
 export function useScenarioOptional(): ScenarioContextValue | null {
   return useContext(ScenarioContext)
 }
+
+export type ActiveScenarioContextValue = ScenarioContextValue
+export const ActiveScenarioProvider = ScenarioProvider
+export const useActiveScenario = useScenario

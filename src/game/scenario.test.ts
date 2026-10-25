@@ -8,9 +8,19 @@ import {
   scenariosList,
 } from '@/context/ScenarioContext'
 import type { Option, Scenario } from '@/context/ScenarioContext'
+import {
+  ActiveScenarioProvider,
+  ScenarioProvider,
+  useActiveScenario,
+  useScenario,
+} from '@/context/ActiveScenarioContext'
 import { applyDelta, checkGameOutcome, initialState } from '@/game/state'
 
 describe('Simulation Scenario Timers and State', () => {
+  it('exposes compatible ActiveScenarioContext aliases', () => {
+    expect(ActiveScenarioProvider).toBe(ScenarioProvider)
+    expect(useActiveScenario).toBe(useScenario)
+  })
   it('has response window configured to exactly 30 seconds', () => {
     expect(SCENARIO_RESPONSE_TIME_SECONDS).toBe(30)
   })
