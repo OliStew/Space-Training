@@ -199,7 +199,7 @@ export function ScenarioPanel() {
       void handleChooseOption(matched)
       setInputText('')
     } else {
-      setFeedback(`No matching action for "${inputText.trim()}". Try selecting A, B, or C.`)
+      setFeedback(`Commander, I do not understand that command. Please write a valid option.`)
     }
   }
 
