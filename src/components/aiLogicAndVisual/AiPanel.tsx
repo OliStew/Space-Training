@@ -13,7 +13,7 @@ const resources = useResources()
   const { pathname } = useLocation()
   const isMarketPage = pathname === '/trades'
   const isScenarioPage = pathname === '/simulation'
-  const { scenario } = useActiveScenario()
+  const { scenario, phase } = useActiveScenario()
 
   const [inputText, setInputText] = useState('')
   const [reaction, setReaction] = useState<LowResourceGameReaction | TradeGameReaction | EventGameReaction | null>(null)
@@ -32,7 +32,7 @@ const resources = useResources()
       ? `CURRENT INCOMING TRADES:\n${incomingTradesText}`
       : undefined
     
-    if (isScenarioPage && scenario) {
+    if (isScenarioPage && phase === 'active' && scenario) {
       incomingEvent = `CURRENT EVENT: ${scenario.name}\n${scenario.description}\nOPTIONS AND THEIR EFFECTS:`;
       scenario.options.forEach((option) => {
         incomingEvent += `\nOption ${option.key}: ${option.label} | Effects: ${JSON.stringify(option.effects)}`;
@@ -60,15 +60,15 @@ const resources = useResources()
   return (
     <section style={{
       padding: '24px',
-      background: '#0a0d0a',
-      color: '#33ff33',
+      background: 'var(--bg)',
+      color: 'var(--main)',
       fontFamily: 'Courier New, Courier, monospace',
-      border: '1px solid #1c4a1c',
+      border: '1px solid var(--dim)',
       borderRadius: '4px',
       letterSpacing: '0.5px'
     }}>
       <div style={{
-        borderBottom: '1px solid #1c4a1c',
+        borderBottom: '1px solid var(--dim)',
         paddingBottom: '12px',
         marginBottom: '20px'
       }}>
@@ -78,10 +78,10 @@ const resources = useResources()
 
       <div style={{
         minHeight: '100px',
-        border: '1px solid #1c4a1c',
+        border: '1px solid var(--dim)',
         padding: '16px',
         marginBottom: '24px',
-        background: '#000000',
+        background: 'var(--card)',
         lineHeight: '1.6'
       }}>
         {reaction ? (
@@ -94,7 +94,7 @@ const resources = useResources()
             </div>
           </div>
         ) : (
-          <div style={{ color: '#1f661f' }}>
+          <div style={{ color: 'var(--dim)' }}>
             Ship computer idling... enter command below.
           </div>
         )}
@@ -102,18 +102,18 @@ const resources = useResources()
 
       {reaction && reaction.actionChain.length > 0 && (
         <div style={{ marginBottom: '24px' }}>
-          <div style={{ marginBottom: '12px', color: '#66ff66' }}>
+          <div style={{ marginBottom: '12px', color: 'var(--hi)' }}>
             RECOMMENDED PLAN:
           </div>
           {reaction.actionChain.map((step) => (
             <div key={step.stepNumber} style={{
-              background: '#041204',
-              border: '1px solid #1c4a1c',
+              background: 'var(--card)',
+              border: '1px solid var(--dim)',
               padding: '14px 16px',
               marginBottom: '10px'
             }}>
               <div>Step {step.stepNumber}: {step.action}</div>
-              <div style={{ fontSize: '13px', color: '#2b882b', marginTop: '6px' }}>
+              <div style={{ fontSize: '13px', color: 'var(--dim)', marginTop: '6px' }}>
                 {step.reasoning}
               </div>
             </div>
@@ -131,9 +131,9 @@ const resources = useResources()
           style={{
             flexGrow: 1,
             padding: '12px',
-            background: '#000000',
-            border: '1px solid #1c4a1c',
-            color: '#33ff33',
+            background: 'var(--bg)',
+            border: '1px solid var(--dim)',
+            color: 'var(--main)',
             fontFamily: 'inherit',
             outline: 'none'
           }}
@@ -143,9 +143,9 @@ const resources = useResources()
           disabled={isProcessing}
           style={{
             padding: '12px 24px',
-            background: '#0a240a',
-            color: '#33ff33',
-            border: '1px solid #33ff33',
+            background: 'var(--main)',
+            color: 'var(--bg)',
+            border: '1px solid var(--main)',
             cursor: 'pointer',
             fontFamily: 'inherit'
           }}

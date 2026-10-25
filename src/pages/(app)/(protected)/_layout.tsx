@@ -14,7 +14,7 @@
  */
 
 import { useState } from 'react'
-import { Link, Outlet } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { AuthGate, AuthOverlay } from 'deepspace'
 // import { Button } from '@/components/ui'
 import { GameProvider } from '@/game/GameProvider'
