@@ -98,4 +98,28 @@ export const actions: Record<string, ActionHandler<Env>> = {
   combatDefend: ({ params, env, userId }) => trades(env, userId, '/defend', { id: params.id, ammo: params.ammo }),
   /** Report that this client has seen / applied the attack's outcome. */
   combatAck: ({ params, env, userId }) => trades(env, userId, '/attack-ack', { id: params.id }),
+
+  // ---- Reset ---------------------------------------------------------------
+
+  /** Reset all server-side data to defaults. Any authenticated user can do this. */
+  resetData: async ({ env, userId, tools }): Promise<ActionResult> => {
+    // Reset markets to seed defaults
+    const marketRes = await markets(env, '/reset', { method: 'POST' })
+    if (!marketRes.success) return marketRes
+    // Reset trades book to empty
+    const tradeRes = await trades(env, userId, '/reset')
+    if (!tradeRes.success) return tradeRes
+    // Clear user-specific records from all collections (except 'users' which holds the account row)
+    const collections = ['settings']
+    for (const col of collections) {
+      // Delete records created by this user, in batches until drained
+      let deleted = Infinity
+      while (deleted >= 100) {
+        const res = await tools.deleteWhere(col, { createdBy: userId }, 100)
+        if (!res.success) return res
+        deleted = (res.data as { deleted: number }).deleted
+      }
+    }
+    return { success: true, data: { reset: true } }
+  },
 }

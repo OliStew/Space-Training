@@ -8,6 +8,9 @@ import { Link } from 'react-router-dom'
 import { useGame, useNow } from '@/game/GameProvider'
 import { PLAYER_TRADABLE_KEYS, DEPLETING_KEYS } from '@/game/state'
 import { RESOURCE_KEYS } from '@/shared/types'
+
+/** Resources visible on the dashboard — metal and buildings are hidden. */
+const VISIBLE_RESOURCE_KEYS = RESOURCE_KEYS.filter((k) => k !== 'metal' && k !== 'buildings')
 import { tradeLegs } from '@/shared/trade-book'
 import { fmt, LABELS, seconds } from '@/components/trading/format'
 import { AIPanel } from '@/components/aiLogicAndVisual/AiPanel'
@@ -24,7 +27,7 @@ export default function DashboardPage() {
       <hr />
       <h2>Resources</h2>
       <pre>
-        {RESOURCE_KEYS.map((k) => {
+        {VISIBLE_RESOURCE_KEYS.map((k) => {
           const val = state.resources[k]
           const line = k === 'money' ? `  ${LABELS[k]}: $${fmt(val)}` : `  ${LABELS[k]}: ${fmt(val, 1)}`
           const depletion = DEPLETING_KEYS.includes(k as any)
@@ -96,7 +99,7 @@ export default function DashboardPage() {
           const left = rate > 0 ? `${Math.ceil(amount / rate)}s` : '∞'
           return `  ${LABELS[k]}: ${fmt(amount, 1)} (${left} left at ${fmt(rate, 2)}/s)\n`
         })}
-        Total resources: ${RESOURCE_KEYS.reduce((s, k) => s + state.resources[k], 0).toLocaleString()}
+        Total resources: ${VISIBLE_RESOURCE_KEYS.reduce((s, k) => s + state.resources[k], 0).toLocaleString()}
       </pre>
 
       <hr />

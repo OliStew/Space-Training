@@ -9,6 +9,9 @@ import { useGame, useNow, useGameState } from '@/game/GameProvider'
 import { useToast } from '@/components/ui'
 import { PLAYER_TRADABLE_KEYS } from '@/game/state'
 import { RESOURCE_KEYS } from '@/shared/types'
+
+/** Resources visible on the trades page — metal and buildings are hidden. */
+const VISIBLE_RESOURCE_KEYS = RESOURCE_KEYS.filter((k) => k !== 'metal' && k !== 'buildings')
 import { TRADE_TTL_MS } from '@/shared/types'
 import { tradeLegs } from '@/shared/trade-book'
 import type { TradableKey, Trade } from '@/shared/types'
@@ -54,7 +57,7 @@ export default function TradesPage() {
 function ResourcesTable({ state, store }: { state: { resources: Record<string, number>; depletion: Record<string, number> }; store: { update: (fn: (s: any) => any) => void } }) {
   return (
     <pre>
-      {RESOURCE_KEYS.map((k) => {
+      {VISIBLE_RESOURCE_KEYS.map((k) => {
         const val = state.resources[k]
         const line = k === 'money' ? `  ${LABELS[k]}: $${fmt(val)}` : `  ${LABELS[k]}: ${fmt(val, 1)}`
         const depleting = DEPLETING_KEYS.includes(k as any)

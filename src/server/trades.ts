@@ -86,6 +86,10 @@ export class AppTradesRoom {
         ackAttack(this.book, userId, id, now)
         result = { ok: true, value: {} }
         break
+      case '/reset':
+        this.book = emptyBook()
+        await this.storage.put('book', this.book)
+        return json({ reset: true })
       default:
         return json({ error: 'Not Found' }, 404)
     }
