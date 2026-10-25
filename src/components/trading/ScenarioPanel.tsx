@@ -1,23 +1,21 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useGame } from '@/game/GameProvider'
-import { useDebugResources } from '@/game'
-import { useTextToSpeech } from '@/lib/tts'
-import { streamGenerate, streamTextSmoothly } from '@/lib/generate'
 import { fmt } from '@/components/trading/format'
 import { Badge } from '@/FancyComp/parts'
-import data from '@/lib/scenarios.json'
+import {
+  matchOption,
+  SCENARIO_COOLDOWN_SECONDS,
+  SCENARIO_RESPONSE_TIME_SECONDS,
+  SCENARIO_TIMEOUT_HEALTH_PENALTY,
+  useScenario,
+} from '@/context/ActiveScenarioContext'
+import type { Effects } from '@/context/ActiveScenarioContext'
 
-type Effects = { food: number; ammunition: number; oxygen: number; base_health_pct: number }
-type Option = {
-  key: string
-  action_id: string
-  label: string
-  intent_category: string
-  trigger_keywords: string[]
-  effects: Effects
+export {
+  SCENARIO_COOLDOWN_SECONDS,
+  SCENARIO_RESPONSE_TIME_SECONDS,
+  SCENARIO_TIMEOUT_HEALTH_PENALTY,
 }
-type Scenario = { id: number; name: string; description: string; options: Option[] }
-const scenarios = data.scenarios as Scenario[]
 
 /** Scenario effect name -> game resource key */
 const RESOURCE_OF: Record<string, 'biomass' | 'ammo' | 'oxygen' | 'health'> = {
@@ -33,96 +31,25 @@ const EFFECT_LABEL: Record<string, string> = {
   base_health_pct: 'COLONY HEALTH %',
 }
 
-function getScenarioSpokenText(scenario: Scenario): string {
-  const optionsText = scenario.options
-    .map((opt) => `Option ${opt.key}: ${opt.label}`)
-    .join('. ')
-  return `Scenario: ${scenario.name}. ${scenario.description} Your options are: ${optionsText}`
-}
-
-function buildScenarioPrompt(
-  scenario: Scenario,
-  opt: Option,
-  consequences: string[],
-): string {
-  const consequencesText =
-    consequences.length > 0
-      ? `Consequences: ${consequences.join(', ')}.`
-      : 'No resources were lost or gained.'
-
-  return `You are the narrative life-support monitor and storyteller for a space station simulation.
-A critical event occurred:
-Scenario: "${scenario.name}"
-Description: "${scenario.description}"
-
-The commander selected Option ${opt.key}: "${opt.label}".
-Mechanical consequences: ${consequencesText}
-
-Write a natural, immersive 2-to-3 sentence outcome describing what happens immediately on the space station as a direct result of this choice.
-You MUST clearly and naturally explain the events that unfold and explicitly state the resources lost or spent (${consequencesText}).
-Do NOT use markdown headers, bolding, asterisks, or quotes. Provide clean, vivid narrative prose.`
-}
-
-function cleanNarrative(rawText: string): string {
-  return rawText
-    .replace(/^["'\s]+|["'\s]+$/g, '')
-    .replace(/^(Narrative|Outcome|Result|Here is what happens|Here's what happens|Immediate outcome):\s*/i, '')
-    .replace(/[*#_`]/g, '')
-    .trim()
-}
-
-function getFallbackNarrative(
-  scenario: Scenario,
-  opt: Option,
-  consequences: string[],
-): string {
-  const resourceText =
-    consequences.length > 0
-      ? `The operation required immediate resource expenditure, resulting in ${consequences.join(', ')}.`
-      : 'Station telemetry confirmed the situation stabilized without additional resource depletion.'
-
-  return `Station personnel executed the commander's order to "${opt.label}". Crews swiftly responded to mitigate the ${scenario.name.toLowerCase()} incident across all affected sectors. ${resourceText}`
-}
-
-function matchOption(text: string, options: Option[]): Option | null {
-  const query = text.trim().toLowerCase()
-  if (!query) return null
-
-  // 1. Exact match on option key ("a", "b", "c", "option a", etc.)
-  const exact = options.find(
-    (o) => o.key.toLowerCase() === query || `option ${o.key.toLowerCase()}` === query,
-  )
-  if (exact) return exact
-
-  // 2. Keyword score matching
-  let best: Option | null = null
-  let bestScore = 0
-  for (const o of options) {
-    const score = (o.trigger_keywords || []).filter((k) => query.includes(k.toLowerCase())).length
-    if (score > bestScore) {
-      best = o
-      bestScore = score
-    }
-  }
-  if (best) return best
-
-  // 3. Substring match on label
-  const labelMatch = options.find(
-    (o) => o.label.toLowerCase().includes(query) || query.includes(o.label.toLowerCase()),
-  )
-  return labelMatch ?? null
-}
-
 export function ScenarioPanel({ onNewScenario }: { onNewScenario?: (scenario: Scenario) => void }) {
   const { state } = useGame()
-  const { add: addResource, remove: removeResource } = useDebugResources()
-  const { speak, stop, isPlaying, isLoading: isVoiceLoading, error: ttsError } = useTextToSpeech()
+  const {
+    scenario,
+    chosen,
+    aiOutcome,
+    isGeneratingOutcome,
+    responseCountdown,
+    countdown,
+    autoRead,
+    setAutoRead,
+    executeOption,
+    speakScenarioOrOutcome,
+    stop,
+    isPlaying,
+    isVoiceLoading,
+    ttsError,
+  } = useScenario()
 
-  // Random initial scenario selection
-  const [id, setId] = useState<number>(() => {
-    return scenarios[Math.floor(Math.random() * scenarios.length)]?.id ?? scenarios[0].id
-  })
-  const [chosen, setChosen] = useState<Option | null>(null)
   const [text, setText] = useState('')
   const [miss, setMiss] = useState(false)
   const [aiOutcome, setAiOutcome] = useState<string | null>(null)
@@ -133,13 +60,6 @@ export function ScenarioPanel({ onNewScenario }: { onNewScenario?: (scenario: Sc
   const sc = useMemo(() => scenarios.find((s) => s.id === id) ?? scenarios[0], [id])
 
   const lastReadIdRef = useRef<number | null>(null)
-  const onNewScenarioRef = useRef(onNewScenario)
-  onNewScenarioRef.current = onNewScenario
-
-  // Announce every scenario that comes up (including the first one).
-  useEffect(() => {
-    onNewScenarioRef.current?.(sc)
-  }, [sc])
   const abortRef = useRef<AbortController | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -326,17 +246,21 @@ export function ScenarioPanel({ onNewScenario }: { onNewScenario?: (scenario: Sc
   }
 
   const submit = () => {
-    if (isGeneratingOutcome || countdown !== null) return
-    const matched = matchOption(text, sc.options)
+    if (isGeneratingOutcome || countdown !== null || responseCountdown === 0) return
+    const matched = matchOption(text, scenario.options)
     if (matched) {
       void executeOption(matched)
+      setText('')
+      setMiss(false)
     } else {
       setMiss(true)
     }
   }
 
   const rows = chosen
-    ? (Object.keys(chosen.effects) as (keyof Effects)[]).filter((k) => chosen.effects[k] !== 0)
+    ? (Object.keys(chosen.effects) as (keyof Effects)[]).filter(
+        (k) => chosen.effects[k] !== undefined && chosen.effects[k] !== 0,
+      )
     : []
 
   return (
@@ -356,19 +280,23 @@ export function ScenarioPanel({ onNewScenario }: { onNewScenario?: (scenario: Sc
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           <Badge kind="out">CRISIS EVENT</Badge>
           <strong style={{ color: 'var(--hi)', letterSpacing: '0.04em' }}>
-            {sc.name.toUpperCase()}
+            {scenario.name.toUpperCase()}
           </strong>
         </span>
-        {countdown !== null && (
+        {countdown !== null ? (
           <Badge kind="warn">NEXT EVENT IN {countdown}S</Badge>
-        )}
+        ) : responseCountdown !== null ? (
+          <Badge kind={responseCountdown <= 10 ? 'crit' : 'warn'}>
+            RESPOND IN {responseCountdown}S
+          </Badge>
+        ) : null}
       </div>
 
-      <p style={{ lineHeight: 1.5, marginBottom: 12 }}>{sc.description}</p>
+      <p style={{ lineHeight: 1.5, marginBottom: 12 }}>{scenario.description}</p>
 
       {/* Options displayed as structured read-only records - NOT pressable buttons */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, margin: '10px 0 14px' }}>
-        {sc.options.map((o) => (
+        {scenario.options.map((o) => (
           <div
             key={o.key}
             className="rc-row"
@@ -393,10 +321,12 @@ export function ScenarioPanel({ onNewScenario }: { onNewScenario?: (scenario: Sc
           COMMAND / ORDER INPUT
           <input
             value={text}
-            disabled={countdown !== null || isGeneratingOutcome}
+            disabled={countdown !== null || isGeneratingOutcome || responseCountdown === 0}
             placeholder={
               countdown !== null
                 ? `System cooldown active. Next event in ${countdown}s...`
+                : responseCountdown !== null
+                ? `Enter order (${responseCountdown}s to respond)...`
                 : 'Enter order (e.g. A, B, C, or describe order)...'
             }
             onChange={(e) => setText(e.target.value)}
@@ -405,11 +335,17 @@ export function ScenarioPanel({ onNewScenario }: { onNewScenario?: (scenario: Sc
         </label>
         <button
           onClick={submit}
-          disabled={!text.trim() || countdown !== null || isGeneratingOutcome}
+          disabled={!text.trim() || countdown !== null || isGeneratingOutcome || responseCountdown === 0}
         >
           {isGeneratingOutcome ? 'TRANSMITTING...' : 'EXECUTE ▶'}
         </button>
       </div>
+
+      {responseCountdown === 0 && countdown !== null && (
+        <p className="rc-muted" style={{ color: '#ff4d4d', fontStyle: 'italic', margin: '4px 0 8px' }}>
+          RESPONSE WINDOW EXPIRED (30S): -{SCENARIO_TIMEOUT_HEALTH_PENALTY}% BASE HEALTH PENALTY. Automatic emergency containment engaged. Next scenario in {countdown}s...
+        </p>
+      )}
 
       {miss && (
         <p className="rc-muted" style={{ color: '#ffb000' }}>
@@ -433,10 +369,7 @@ export function ScenarioPanel({ onNewScenario }: { onNewScenario?: (scenario: Sc
           <button
             className="ghost"
             disabled={isVoiceLoading || isGeneratingOutcome}
-            onClick={() => {
-              const textToRead = aiOutcome || getScenarioSpokenText(sc)
-              speak(textToRead).catch(() => {})
-            }}
+            onClick={speakScenarioOrOutcome}
           >
             {isVoiceLoading ? 'LOADING...' : aiOutcome ? 'READ OUTCOME' : 'READ SCENARIO'}
           </button>
@@ -450,19 +383,30 @@ export function ScenarioPanel({ onNewScenario }: { onNewScenario?: (scenario: Sc
             <span>
               EXECUTED: {chosen.label} <span className="rc-muted">({chosen.intent_category})</span>
             </span>
-            <Badge kind={chosen.effects.base_health_pct < -9 ? 'crit' : chosen.effects.base_health_pct < 0 ? 'warn' : 'out'}>
+            <Badge
+              kind={
+                chosen.effects.base_health_pct < -9
+                  ? 'crit'
+                  : chosen.effects.base_health_pct < 0
+                  ? 'warn'
+                  : 'out'
+              }
+            >
               {rows.length ? 'COSTS INCURRED' : 'NO COST'}
             </Badge>
           </div>
           {rows.map((k) => {
             const rk = RESOURCE_OF[k]
             const cur = state.resources[rk]
+            const effectVal = chosen.effects[k] ?? 0
             return (
               <div className="rc-row" key={k}>
                 <span>{EFFECT_LABEL[k]}</span>
                 {cur === undefined
-                  ? `${chosen.effects[k]}`
-                  : `${fmt(cur, 1)} → ${fmt(Math.max(0, cur + chosen.effects[k]), 1)} (${chosen.effects[k] > 0 ? '+' : ''}${chosen.effects[k]})`}
+                  ? `${effectVal}`
+                  : `${fmt(cur, 1)} → ${fmt(Math.max(0, cur + effectVal), 1)} (${
+                      effectVal > 0 ? '+' : ''
+                    }${effectVal})`}
               </div>
             )
           })}

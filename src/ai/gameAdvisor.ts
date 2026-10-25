@@ -22,10 +22,10 @@ const warningThreshold: Record<string, number> = {
 };
 const criticalThreshold: Record<string, number> = {
   'health': 30,
-  'oxygen': 10,
-  'food/spaceGoop/Biomass': 20,
+  'oxygen': 20,
+  'food/spaceGoop/Biomass': 10,
   'ammo': 10,
-  'spaceBucks/money': 300
+  'spaceBucks/money': 100
 };
 
 const keys = Object.keys(warningThreshold);

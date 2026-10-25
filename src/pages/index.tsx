@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Badge, TerminalFrame } from '@/FancyComp/parts'
+import { Seo } from '@/components/Seo'
+import { seo } from '@/seo'
 
 const BOOT = [
   'Initializing terminal bios memory map... [ OK ]',
@@ -10,7 +12,9 @@ const BOOT = [
 
 export default function LandingPage() {
   return (
-    <TerminalFrame>
+    <>
+      <Seo {...seo} path="/" />
+      <TerminalFrame>
       <div className="rc-center">
         <div className="rc-win">
           <div className="rc-titlebar">
@@ -28,5 +32,6 @@ export default function LandingPage() {
         </div>
       </div>
     </TerminalFrame>
+    </>
   )
 }

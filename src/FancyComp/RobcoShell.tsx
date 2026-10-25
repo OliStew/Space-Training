@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useGame, useNow } from '@/game/GameProvider'
 import { calcDayTime } from '@/game'
+import { useScenarioOptional } from '@/context/ScenarioContext'
 import { fmt, seconds } from '@/components/trading/format'
 import { AIPanel } from '@/components/aiLogicAndVisual/AiPanel'
 import { ScenarioPanel } from '@/components/trading/ScenarioPanel'
@@ -84,9 +85,19 @@ export default function RobcoShell() {
 
   const r = state.resources
   const dayTime = calcDayTime(state.gameTime)
+  const scenarioCtx = useScenarioOptional()
+  const crisisTicker = scenarioCtx
+    ? scenarioCtx.countdown !== null
+      ? `NEXT CRISIS IN ${scenarioCtx.countdown}S`
+      : scenarioCtx.responseCountdown !== null
+      ? `CRISIS: ${scenarioCtx.scenario.name.toUpperCase()} (${scenarioCtx.responseCountdown}S)`
+      : null
+    : null
+
   const ticker = [
     `DAY: ${dayTime.day} (${dayTime.timeString})`,
     `CYCLE: ${dayTime.phase} (${Math.round(dayTime.secondsLeftInDay)}S REMAINING)`,
+    ...(crisisTicker ? [crisisTicker] : []),
     `OXYGEN: ${fmt(r.oxygen, 1)}`,
     `BIOMASS: ${fmt(r.biomass, 1)}`,
     `CREDITS: $${fmt(r.money)}`,
