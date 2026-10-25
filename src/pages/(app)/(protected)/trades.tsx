@@ -35,7 +35,6 @@ export default function TradesPage() {
         <PlayerTradesSection net={net} engine={engine} serverNow={serverNow} error={error} success={success} />
       </Panel>
       <Panel title="RECENT ACTIVITY"><HistorySection /></Panel>
-      <Panel title="VOICE ASSISTANT"><VoiceAssistantPanel /></Panel>
     </>
   )
 }
@@ -70,14 +69,19 @@ function MarketsSection({ net, engine, error, success, state }: { net: any; engi
           )
         })}
       </div>
-      {keys.map((k) => (
+      {keys.map((k) => {
+        const n = Number(qty[k] ?? 1)
+        const valid = Number.isInteger(n) && n >= 1
+        const total = (unit: number) => (valid ? ` $${fmt(Math.round(unit * n * 100) / 100)}` : '')
+        return (
         <div className="rc-row" key={k}>
           <span>{LABELS[k]}: buy {fmt(market.prices[k]!.buy)} / sell {fmt(market.prices[k]!.sell)}</span>
           <input type="number" min="1" value={qty[k] ?? '1'} onChange={(e) => setQty({ ...qty, [k]: e.target.value })} style={{ width: 70 }} aria-label={`${LABELS[k]} quantity`} />
-          <button type="button" disabled={busy} onClick={() => trade('buy', k)}>BUY</button>
-          <button type="button" className="ghost" disabled={busy} onClick={() => trade('sell', k)}>SELL</button>
+          <button type="button" disabled={busy} onClick={() => trade('buy', k)}>BUY (−{total(market.prices[k]!.buy).trim() || '—'})</button>
+          <button type="button" className="ghost" disabled={busy} onClick={() => trade('sell', k)}>SELL (+{total(market.prices[k]!.sell).trim() || '—'})</button>
         </div>
-      ))}
+        )
+      })}
     </>
   )
 }
@@ -159,8 +163,13 @@ function PlayerTradesSection({ net, engine, serverNow, error, success }: { net: 
   )
 }
 
+const HISTORY_SHOWN = 10
+const HISTORY_MAX_AGE_MS = 5 * 60 * 1000
+
 function HistorySection() {
-  const { history } = useGameState()
+  const { history: all } = useGameState()
+  const now = useNow(1000)
+  const history = all.filter((h) => now - h.at <= HISTORY_MAX_AGE_MS)
   if (history.length === 0) return <p className="rc-muted">Nothing yet.</p>
-  return <pre>{[...history].reverse().slice(0, 20).map((h) => `[${new Date(h.at).toLocaleTimeString()}] ${h.text}\n`).join('')}</pre>
+  return <pre>{[...history].reverse().slice(0, HISTORY_SHOWN).map((h) => `[${new Date(h.at).toLocaleTimeString()}] ${h.text}\n`).join('')}</pre>
 }

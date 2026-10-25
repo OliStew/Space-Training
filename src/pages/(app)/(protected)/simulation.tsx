@@ -8,7 +8,8 @@ import { isHealthRegenerating, useDayTime } from '@/game'
 import { RESOURCE_KEYS } from '@/shared/types'
 import { fmt, LABELS } from '@/components/trading/format'
 import { ResourcesPanel } from '@/components/trading/ResourcesPanel'
-import { ScenarioPanel } from '@/components/trading/ScenarioPanel'
+import { useOutletContext } from 'react-router-dom'
+import type { ShellContext } from '@/FancyComp/RobcoShell'
 import { Badge, Meter, Panel } from '@/FancyComp/parts'
 import { depletionRows, sumResources } from '@/FancyComp/sim'
 
@@ -17,6 +18,7 @@ const VISIBLE_RESOURCE_KEYS = RESOURCE_KEYS.filter((k) => k !== 'metal' && k !==
 
 export default function SimulationPage() {
   const { state } = useGame()
+  const { setScenarioSlot } = useOutletContext<ShellContext>()
   const dayTime = useDayTime()
   const isRegen = isHealthRegenerating(state.resources)
   const isOxyZero = state.resources.oxygen <= 0
@@ -77,7 +79,7 @@ export default function SimulationPage() {
       </Panel>
 
       <Panel title="SCENARIO SIMULATOR">
-        <ScenarioPanel />
+        <div ref={setScenarioSlot} />
       </Panel>
 
       <Panel title="ALL RESOURCES" right={`TOTAL $${sumResources(state).toLocaleString()}`}>
