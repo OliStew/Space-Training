@@ -1,12 +1,10 @@
-
 import React, { useState } from 'react'
 import { useGameTime, useResources } from '@/game'
 import { askResourceAI } from '@/services/ai-service'
-import type { LowResourceGameReaction, LowResourceGameAction } from '@/interfaces/aiReactions'
-        
+import type { LowResourceGameReaction } from '@/interfaces/aiReactions'
+
 export function AIPanel() {
   const resources = useResources()
-  const { seconds: gameTime } = useGameTime()
 
   const [inputText, setInputText] = useState('')
   const [reaction, setReaction] = useState<LowResourceGameReaction | null>(null)
@@ -19,12 +17,12 @@ export function AIPanel() {
     setIsProcessing(true)
 
     try {
-      const aiResponse = await askResourceAI(inputText, resources, gameTime)
+      const aiResponse = await askResourceAI(inputText, resources)
       setReaction(aiResponse)
     } catch (err) {
       console.error('AI transmission error:', err)
       setReaction({
-        text: 'Comms array offline. Check console parameters.',
+        text: 'COMMS ARRAY OFFLINE. CHECK CONSOLE PARAMETERS.',
         vibe: 'WARNING',
         actionChain: [{ stepNumber: 1, action: 'NONE', reasoning: 'Transmission failure.' }]
       })
@@ -34,92 +32,97 @@ export function AIPanel() {
     }
   }
 
-  const handleRunSuggestedStep = (action: LowResourceGameAction) => {
-    // UI triggers recommendation execution via your external engine/action handler
-    void action
-  }
-///temporary stuff 
-  const getVibeColor = (vibe?: string) => {
-    switch (vibe) {
-      case 'OPTIMAL': return '#00ffcc'
-      case 'STABLE': return '#00ccff'
-      case 'WARNING': return '#ffcc00'
-      case 'CRITICAL': return '#ff3333'
-      default: return '#ffffff'
-    }
-  }
-
   return (
-    <section style={{ padding: '16px', background: '#111', color: '#fff', borderRadius: '8px' }}>
-      <h2>🌌 Colony Tactical AI</h2>
-
-      {/* AI Dialogue Box */}
+    <section style={{
+      padding: '24px',
+      background: '#0a0d0a',
+      color: '#33ff33',
+      fontFamily: 'Courier New, Courier, monospace',
+      border: '1px solid #1c4a1c',
+      borderRadius: '4px',
+      letterSpacing: '0.5px'
+    }}>
       <div style={{
-        minHeight: 80,
-        border: `1px solid ${getVibeColor(reaction?.vibe)}`,
-        padding: '12px',
-        marginBottom: '12px',
-        background: '#000'
+        borderBottom: '1px solid #1c4a1c',
+        paddingBottom: '12px',
+        marginBottom: '20px'
+      }}>
+        <span>SYSTEM: COLONY TACTICAL AI</span>
+      </div>
+
+      <div style={{
+        minHeight: '100px',
+        border: '1px solid #1c4a1c',
+        padding: '16px',
+        marginBottom: '24px',
+        background: '#000000',
+        lineHeight: '1.6'
       }}>
         {reaction ? (
           <div>
-            <span style={{ color: getVibeColor(reaction.vibe), fontWeight: 'bold' }}>
-              [{reaction.vibe}]
-            </span>
-            <p style={{ margin: '8px 0 0 0', fontFamily: 'monospace' }}>
-              [{gameTime}s] AI: {reaction.text}
-            </p>
+            <div style={{ marginBottom: '12px' }}>
+              [{reaction.vibe}] TRANSMISSION RECEIVED
+            </div>
+            <div>
+              AI: {reaction.text}
+            </div>
           </div>
         ) : (
-          <p style={{ margin: 0, color: '#666' }}>Ship computer idling... enter command below.</p>
+          <div style={{ color: '#1f661f' }}>
+            Ship computer idling... enter command below.
+          </div>
         )}
       </div>
 
-      {/* Recommended Action Steps */}
       {reaction && reaction.actionChain.length > 0 && (
-        <div style={{ marginBottom: '12px' }}>
-          <h4>Recommended Plan:</h4>
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ marginBottom: '12px', color: '#66ff66' }}>
+            RECOMMENDED PLAN:
+          </div>
           {reaction.actionChain.map((step) => (
             <div key={step.stepNumber} style={{
-              background: '#222',
-              padding: '8px',
-              marginBottom: '6px',
-              borderRadius: '4px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
+              background: '#041204',
+              border: '1px solid #1c4a1c',
+              padding: '14px 16px',
+              marginBottom: '10px'
             }}>
-              <div>
-                <strong>Step {step.stepNumber}: {step.action}</strong>
-                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#aaa' }}>{step.reasoning}</p>
+              <div>Step {step.stepNumber}: {step.action}</div>
+              <div style={{ fontSize: '13px', color: '#2b882b', marginTop: '6px' }}>
+                {step.reasoning}
               </div>
-              {step.action !== 'NONE' && (
-                <button
-                  onClick={() => handleRunSuggestedStep(step.action)}
-                  style={{ background: '#00ffcc', border: 'none', padding: '6px 12px', cursor: 'pointer', fontWeight: 'bold', color: '#000' }}
-                >
-                  Execute
-                </button>
-              )}
             </div>
           ))}
         </div>
       )}
 
-      {/* Input Terminal */}
-      <form onSubmit={handleTransmitToAI} style={{ display: 'flex', gap: '8px' }}>
+      <form onSubmit={handleTransmitToAI} style={{ display: 'flex', gap: '12px' }}>
         <input
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           placeholder="Consult space advisor..."
           disabled={isProcessing}
-          style={{ flexGrow: 1, padding: '8px', background: '#222', border: '1px solid #444', color: '#fff' }}
+          style={{
+            flexGrow: 1,
+            padding: '12px',
+            background: '#000000',
+            border: '1px solid #1c4a1c',
+            color: '#33ff33',
+            fontFamily: 'inherit',
+            outline: 'none'
+          }}
         />
         <button
           type="submit"
           disabled={isProcessing}
-          style={{ padding: '8px 16px', background: '#00ffcc', color: '#000', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
+          style={{
+            padding: '12px 24px',
+            background: '#0a240a',
+            color: '#33ff33',
+            border: '1px solid #33ff33',
+            cursor: 'pointer',
+            fontFamily: 'inherit'
+          }}
         >
           {isProcessing ? 'COMPUTING...' : 'TRANSMIT'}
         </button>

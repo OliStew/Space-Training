@@ -6,21 +6,12 @@ import { generateResponse } from './generate'
 import type { 
   LowResourceGameReaction, 
   LowResourceGameAction,
-  ColonyVibe
 } from '../interfaces/aiReactions'
-const ALLOWED_VIBES: ColonyVibe[] = [
-  'OPTIMAL',
-  'STABLE',
-  'WARNING',
-  'CRITICAL'
-];
+
 const ALLOWED_ACTIONS: LowResourceGameAction[] = [
   'BUY_AMMO',
   'BUY_SPACE_GOOP',
   'BUY_OXYGEN',
-  'TRADE_FOR_SPACE_GOOP',
-  'TRADE_FOR_AMMO',
-  'TRADE_FOR_OXYGEN',
   'PRODUCE_SPACE_GOOP',
   'PRODUCE_AMMO',
   'PRODUCE_OXYGEN',
@@ -39,7 +30,7 @@ Analyze the colony's current resource state and the player's input.
 You MUST return ONLY a raw JSON object matching this exact TypeScript structure:
 {
   "text": "1-2 sentences of in-character advisor commentary.",
-  "vibe": "${JSON.stringify(ALLOWED_VIBES)}",
+  "vibe": "OPTIMAL" | "STABLE" | "WARNING" | "CRITICAL",
   "actionChain": [
     {
       "stepNumber": 1,
@@ -49,6 +40,8 @@ You MUST return ONLY a raw JSON object matching this exact TypeScript structure:
   ]
 }
 
+FORMATTING CONSTRAINTS:
+Do NOT use bolding (**), italics (*), or markdown bullet points in "text" or "reasoning". You may use spacing only to format text. Otherwise, provide plain unformatted text. 
 STRICT VIBE AND THRESHOLD RULES:
 1. "OPTIMAL": Set to "OPTIMAL" only when everything is exceptionally high (all resources are over 90 and money is over 2000).
 2. "STABLE": Set to "STABLE" when resources are safe and above danger lines, but not at peak optimal levels. 
@@ -62,27 +55,54 @@ STRICT ACTION ALLOWLIST:
 You can ONLY choose actions from this list: ${JSON.stringify(ALLOWED_ACTIONS)}
 `;
 
+export function buildColonyPrompt(userMessage: string, resources: Record<string, any>): string {
+  return `${GAME_ADVISOR_SYSTEM_PROMPT}\n\n[COLONY STATUS]\nResources: ${JSON.stringify(resources)}\nPlayer Message: "${userMessage}"`
+}
+
+/* CHANGED: Exported standalone response parser that strips markdown bolding and formats reactions */
+export function parseColonyAdvice(rawText: string): LowResourceGameReaction {
+  const cleanJson = rawText
+    .replace(/```json|```/g, '')
+    .replace(/\*\*/g, '')
+    .replace(/\*/g, '')
+    .trim()
+
+  let parsed: Partial<LowResourceGameReaction> = {}
+  try {
+    parsed = JSON.parse(cleanJson)
+  } catch {
+    parsed = { text: cleanJson }
+  }
+
+  const sanitize = (str?: string) => (str || '').replace(/\*\*/g, '').replace(/\*/g, '')
+
+  return {
+    text: sanitize(parsed.text || cleanJson || 'Tactical update received.'),
+    vibe: parsed.vibe || 'STABLE',
+    actionChain: Array.isArray(parsed.actionChain)
+      ? parsed.actionChain.map((step: any) => ({
+          ...step,
+          reasoning: sanitize(step.reasoning)
+        }))
+      : [],
+  }
+}
+
+/* CHANGED: Simplified getColonyAdvice signature and updated parsing logic using parseColonyAdvice */
 export async function getColonyAdvice(
   env: any,
   userMessage: string,
   resources: Record<string, any>,
-  gameTime: number
 ): Promise<LowResourceGameReaction> {
-
-  const colonyStatusPayload = `
-[COLONY STATUS AT ${gameTime}s]
-Resources: ${JSON.stringify(resources)}
-Player Message: "${userMessage}"
-`;
+  const colonyStatusPayload = buildColonyPrompt(userMessage, resources)
 
   try {
     const rawResponseText = await generateResponse(
       env,
-      `${GAME_ADVISOR_SYSTEM_PROMPT}\n\n${colonyStatusPayload}`
+      colonyStatusPayload
     )
 
-    const cleanJson = rawResponseText.replace(/```json|```/g, '').trim();
-    return JSON.parse(cleanJson) as LowResourceGameReaction;
+    return parseColonyAdvice(rawResponseText)
 
   } catch (error) {
     console.error("AI parsing failed:", error);

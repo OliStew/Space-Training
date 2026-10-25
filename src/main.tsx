@@ -4,7 +4,9 @@ import { createRoot, hydrateRoot } from 'react-dom/client'
 import { routes } from '@generouted/react-router/lazy'
 import { createBrowserRouter, RouterProvider } from 'react-router'
 import { installStaleChunkRecovery } from './stale-chunk-recovery'
-import './styles.css'
+import './olivia-styles.css'
+import './themes.css'
+import './base.css'
 
 async function main() {
   const root = document.getElementById('root')!

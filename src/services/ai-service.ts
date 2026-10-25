@@ -1,30 +1,55 @@
 import type { LowResourceGameReaction } from '../interfaces/aiReactions'
+import { getAuthToken } from 'deepspace'
+import { buildColonyPrompt, parseColonyAdvice } from '../ai/gameAdvisor'
 
 export async function askResourceAI(
-  userCommand: string,
-  resources: Record<string, any>,
-  gameTime: number
+  envOrCommand: any,
+  userCommandOrResources?: any,
+  resources?: any
 ): Promise<LowResourceGameReaction> {
-  const response = await fetch('/api/colony-advice', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      userMessage: userCommand,
-      resources,
-      gameTime,
-    }),
-  })
-
-  if (!response.ok) {
-    const errorBody = (await response.json().catch(() => ({}))) as Record<string, unknown>
-    throw new Error(String(errorBody.error || `API error: ${response.status}`))
+  const token = await getAuthToken()
+  if (!token) {
+    throw new Error('Not authenticated. Please log in.')
   }
 
-  return response.json() as Promise<LowResourceGameReaction>
+ 
+  let command = ''
+  let resourcesObj: Record<string, any> = {}
+
+  if (typeof envOrCommand === 'string') {
+    
+    command = envOrCommand
+    resourcesObj = typeof userCommandOrResources === 'object' ? userCommandOrResources : {}
+  } else {
+    
+    command = typeof userCommandOrResources === 'string' ? userCommandOrResources : String(userCommandOrResources || '')
+    resourcesObj = typeof resources === 'object' ? resources : {}
+  }
+
+  
+  const payload = buildColonyPrompt(command, resourcesObj)
+
+  
+  const response = await fetch('/api/generate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ prompt: payload }),
+  })
+
+if (!response.ok) {
+  const rawErrorText = await response.text();
+  console.error('Server 500 Response Body:', rawErrorText);
+  throw new Error(`API error: ${response.status} - ${rawErrorText}`);
 }
 
+  const data = (await response.json()) as { text?: string; error?: string }
+  if (data.error) {
+    throw new Error(data.error)
+  }
 
-//export async function askEventAI(eventDetails: { title: string; description: string; riskLevel: string }, resources: Record<string, any>): Promise<>
-// export async function askTradeAI(tradeOffer: { offering: string; asking: string }, resources: Record<string, any>) {
-//   return await getTradeAdvice(null, tradeOffer, resources);
-// }
+
+  return parseColonyAdvice(data.text ?? '')
+}

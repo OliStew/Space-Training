@@ -1,10 +1,10 @@
 /*
  * Theme overrides — applied via <html data-theme="<id>">.
  *
- * Default values live in `styles.css` (@theme block, slate — a neutral
- * placeholder, not a design choice). Every app should define its OWN theme
- * before first deploy: copy the example block below, rename the selector,
- * and set colors that fit the product. Shape comes from `--radius`.
+ * Every theme is a `[data-theme="<id>"]` block below. The `@theme` block in
+ * `styles.css` provides Tailwind utility defaults; these blocks ensure the
+ * CSS variables are visible on the matching selector so theme switching works
+ * consistently and is inspectable in dev tools.
  *
  * To add a theme:
  *   1. Add a `[data-theme="my-id"] { ... }` block overriding the shadcn
@@ -15,6 +15,35 @@
  *      in index.html so the pre-CSS frame matches (no white flash).
  *   4. Switch to it via `data-theme` on <html> in index.html.
  */
+
+/* Slate — default dark theme. Mirrors the @theme defaults in styles.css so
+ * the data-theme="slate" selector is explicit and inspectable in dev tools. */
+[data-theme="slate"] {
+  color-scheme: dark;
+  --color-background: #0a0a0a;
+  --color-foreground: #e8eaed;
+  --color-card: #161616;
+  --color-card-foreground: #e8eaed;
+  --color-popover: #161616;
+  --color-popover-foreground: #e8eaed;
+  --color-primary: #818cf8;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #1e1e1e;
+  --color-secondary-foreground: #e8eaed;
+  --color-muted: #1e1e1e;
+  --color-muted-foreground: #9ca3af;
+  --color-accent: #262626;
+  --color-accent-foreground: #e8eaed;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-border: rgba(60, 64, 67, 0.6);
+  --color-input: rgba(60, 64, 67, 0.6);
+  --color-ring: #818cf8;
+  --shadow-card: 0 1px 2px 0 rgba(0, 0, 0, 0.12);
+  --shadow-card-hover: 0 2px 8px 0 rgba(0, 0, 0, 0.16);
+  --color-shell: #0a0a0a;
+  --color-shell-panel: #161616;
+}
 
 /* Paper — light example theme; shows the full token contract incl.
  * `color-scheme: light`. Replace or delete it once the app has its own. */

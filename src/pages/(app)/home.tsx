@@ -1,10 +1,10 @@
-import { Link } from 'react-router-dom'
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 export default function HomePage() {
-  return (
-    <div style={{ padding: 16 }}>
-      <h1>Life in Space</h1>
-      <p><Link to="/trade">Go to the trading page</Link></p>
-    </div>
-  )
+  const navigate = useNavigate()
+  useEffect(() => {
+    navigate('/trade', { replace: true })
+  }, [navigate])
+  return null
 }
