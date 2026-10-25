@@ -1,13 +1,17 @@
 import React, { useState } from 'react'
 import { useGameTime, useResources } from '@/game'
 import { askResourceAI } from '@/services/ai-service'
-import type { LowResourceGameReaction } from '@/interfaces/aiReactions'
+import type { LowResourceGameReaction, TradeGameReaction, EventGameReaction } from '@/interfaces/aiReactions'
+
+const tradeOffer= undefined;
+const incomingEvent= undefined;
+
 
 export function AIPanel() {
   const resources = useResources()
 
   const [inputText, setInputText] = useState('')
-  const [reaction, setReaction] = useState<LowResourceGameReaction | null>(null)
+  const [reaction, setReaction] = useState<LowResourceGameReaction | TradeGameReaction | EventGameReaction | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
 
   const handleTransmitToAI = async (e: React.FormEvent) => {
@@ -17,7 +21,7 @@ export function AIPanel() {
     setIsProcessing(true)
 
     try {
-      const aiResponse = await askResourceAI(inputText, resources)
+      const aiResponse = await askResourceAI(inputText, resources, undefined, tradeOffer, incomingEvent)
       setReaction(aiResponse)
     } catch (err) {
       console.error('AI transmission error:', err)
