@@ -78,9 +78,13 @@ const TRADE_ADVISOR = `
     - Resources can be exchanged for money or money for resources.
     - Resources CANNOT be exchanged for other resources.
     - ONLY these ressouces can be exchanged: OXYGEN, AMMO, SPACE GOOP, SPACE BUCKS. No other resource can be exchanged.
+    - The active trades can be seen in MARKET DATA and ACTIVE TRADE OFFERS.
     - Evaluate the offered items versus what you are giving up. 
     - Only recommend ACCEPT_TRADE if it addresses critical shortages or provides exceptional economic value without bankrupting the colony. Otherwise, recommend REJECT_TRADE.
-8. NO-ISSUE STATE: If all resources are safely above their danger lines, set the action to 'NONE'. Do not invent problems when everything is fine.
+9. PREVIOUS TRADES:
+    -Take in account recent trades and compare prices to find the best deal.
+    -Recent trades are NOT necessarily currently available trades. 
+10. NO-ISSUE STATE: If all resources are safely above their danger lines, set the action to 'NONE'. Do not invent problems when everything is fine.
 STRICT ACTION ALLOWLIST:
 You can ONLY choose actions from this list: ${JSON.stringify(TRADE_ACTIONS)}`
 const EVENT_ADVISOR = `
@@ -156,7 +160,7 @@ export function buildColonyPrompt(
   let moreContext = "";
 
   // Add market data context
-  if (marketSnapshot && marketSnapshot.markets.length > 0) {
+  if (marketSnapshot && marketSnapshot.markets.length > 0 && !incomingEvent) {
     const marketInfo = marketSnapshot.markets.map(m => ({
       name: m.name,
       prices: m.prices
@@ -164,8 +168,8 @@ export function buildColonyPrompt(
     moreContext += `\n[MARKET DATA]\nCurrent market prices: ${JSON.stringify(marketInfo)}`;
   }
 
-  // Add trade history context
-  if (tradeHistory && tradeHistory.length > 0) {
+  
+  if (tradeHistory && tradeHistory.length > 0 && !tradeOffer) {
     const recentTrades = tradeHistory.slice(-10).map(t => ({
       id: t.id,
       from: t.fromName,
