@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useDebugResources } from '@/game'
 import { useTextToSpeech } from '@/lib/tts'
-import { generate } from '@/lib/generate'
+import { streamGenerate, streamTextSmoothly } from '@/lib/generate'
 import scenariosData from '@/scenarios.json'
 
 interface ScenarioOption {
@@ -94,6 +94,7 @@ export function ScenarioPanel() {
 
   // Track the scenario ID to avoid duplicate auto-reads on re-renders
   const lastReadIdRef = useRef<number | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     if (!scenario || !autoRead) return
@@ -110,6 +111,9 @@ export function ScenarioPanel() {
   const nextRandomScenario = () => {
     if (allScenarios.length === 0) return
     stop()
+    abortRef.current?.abort()
+    abortRef.current = null
+
     let next = scenario
     if (allScenarios.length > 1) {
       while (next.id === scenario?.id) {
@@ -164,36 +168,64 @@ export function ScenarioPanel() {
     }
 
     const effectStr = changes.length > 0 ? ` (${changes.join(', ')})` : ''
-    setFeedback(`Selected Option ${opt.key}: "${opt.label}"${effectStr}`)
-    setAiOutcome(null)
+    setFeedback(`Selected "${opt.label}"`)
+    setAiOutcome('')
     setIsGeneratingOutcome(true)
 
-    // Call DeepSpace AI to generate a narrative response with robust fallback
+    // Cancel any previous in-flight generation
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    // Stream narrative from DeepSpace AI with typewriter fallback protection
     let narrative = ''
     try {
       const prompt = buildScenarioPrompt(scenario, opt, changes)
-      // Guard with a 7-second timeout so offline or slow requests fall back immediately
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('AI response timed out')), 7000)
-      })
+      // Guard with an 8-second timeout so slow/stalled networks trigger fallback
+      const timeoutId = setTimeout(() => controller.abort(), 8000)
 
-      const rawResponse = await Promise.race([generate(prompt), timeoutPromise])
-      const cleaned = cleanNarrative(rawResponse)
+      try {
+        narrative = await streamGenerate(
+          prompt,
+          (_chunk, accumulated) => {
+            if (!controller.signal.aborted) {
+              setAiOutcome(accumulated)
+            }
+          },
+          { signal: controller.signal },
+        )
+      } finally {
+        clearTimeout(timeoutId)
+      }
+
+      const cleaned = cleanNarrative(narrative)
       if (cleaned && cleaned.length > 15) {
         narrative = cleaned
+        setAiOutcome(cleaned)
       } else {
-        narrative = getFallbackNarrative(scenario, opt, changes)
+        throw new Error('Response too short or malformed')
       }
     } catch (err) {
-      console.warn('AI narrative generation failed or timed out, applying fallback:', err)
+      if (controller.signal.aborted && abortRef.current !== controller) {
+        // Superseded by a newer choice or scenario switch
+        return
+      }
+
+      console.warn('AI narrative streaming failed or timed out, applying typewriter fallback:', err)
       narrative = getFallbackNarrative(scenario, opt, changes)
+      await streamTextSmoothly(narrative, (current) => {
+        if (!controller.signal.aborted) {
+          setAiOutcome(current)
+        }
+      })
     } finally {
-      setAiOutcome(narrative)
-      setIsGeneratingOutcome(false)
+      if (abortRef.current === controller) {
+        setIsGeneratingOutcome(false)
+      }
     }
 
-    // If autoRead is on, speak the narrative result
-    if (autoRead && narrative) {
+    // If autoRead is on, speak the finalized narrative result
+    if (autoRead && narrative && !controller.signal.aborted) {
       speak(narrative).catch(() => {})
     }
   }
