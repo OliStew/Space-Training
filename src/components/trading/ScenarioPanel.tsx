@@ -113,7 +113,7 @@ function matchOption(text: string, options: Option[]): Option | null {
   return labelMatch ?? null
 }
 
-export function ScenarioPanel() {
+export function ScenarioPanel({ onNewScenario }: { onNewScenario?: (scenario: Scenario) => void }) {
   const { state } = useGame()
   const { add: addResource, remove: removeResource } = useDebugResources()
   const { speak, stop, isPlaying, isLoading: isVoiceLoading, error: ttsError } = useTextToSpeech()
@@ -133,6 +133,13 @@ export function ScenarioPanel() {
   const sc = useMemo(() => scenarios.find((s) => s.id === id) ?? scenarios[0], [id])
 
   const lastReadIdRef = useRef<number | null>(null)
+  const onNewScenarioRef = useRef(onNewScenario)
+  onNewScenarioRef.current = onNewScenario
+
+  // Announce every scenario that comes up (including the first one).
+  useEffect(() => {
+    onNewScenarioRef.current?.(sc)
+  }, [sc])
   const abortRef = useRef<AbortController | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)

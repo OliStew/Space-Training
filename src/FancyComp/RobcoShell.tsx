@@ -1,9 +1,14 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useGame, useNow } from '@/game/GameProvider'
 import { calcDayTime } from '@/game'
 import { fmt, seconds } from '@/components/trading/format'
 import { AIPanel } from '@/components/aiLogicAndVisual/AiPanel'
+import { ScenarioPanel } from '@/components/trading/ScenarioPanel'
+import { ScenarioPopup } from '@/components/trading/ScenarioPopup'
+import type { ScenarioAlert } from '@/components/trading/ScenarioPopup'
+import { AttackPopup } from '@/components/combat/AttackPopup'
 import { Badge, TerminalFrame } from './parts'
 import { EndStateModal } from './EndStateModal'
 
@@ -31,11 +36,25 @@ const NAV = [
 
 type Pt = [number, number]
 
+/** Pages pass their element here (via the Outlet context) to show the always-running scenario panel. */
+export interface ShellContext {
+  setScenarioSlot: (el: HTMLElement | null) => void
+}
+
 export default function RobcoShell() {
   const { pathname } = useLocation()
   const { state, net } = useGame()
   const now = useNow()
   const [agentOpen, setAgentOpen] = useState(false)
+  const [scenarioAlert, setScenarioAlert] = useState<ScenarioAlert | null>(null)
+  const closeScenarioAlert = useCallback(() => setScenarioAlert(null), [])
+  // The scenario panel renders into this element for the whole session. It is detached
+  // (so invisible) except while the simulation page has handed us a slot to show it in.
+  const scenarioHost = useMemo(() => document.createElement('div'), [])
+  const setScenarioSlot = useCallback(
+    (el: HTMLElement | null) => (el ? el.appendChild(scenarioHost) : scenarioHost.remove()),
+    [scenarioHost],
+  )
   const gridRef = useRef<HTMLDivElement>(null)
   const winRef = useRef<HTMLElement>(null)
   const [pts, setPts] = useState<Pt[] | null>(null)
@@ -122,7 +141,7 @@ export default function RobcoShell() {
             <div className="t"><small>robco.exe_</small><b>{NAV[active]?.title ?? 'ROBCO TERMINAL'}</b></div>
             <span className="rc-muted" style={{ marginRight: 12 }}>● CONNECTED</span>
           </div>
-          <div className="rc-body" key={pathname}><Outlet /></div>
+          <div className="rc-body" key={pathname}><Outlet context={{ setScenarioSlot } satisfies ShellContext} /></div>
         </section>
       </main>
 
@@ -134,6 +153,15 @@ export default function RobcoShell() {
         </div>
         <div className="rc-agent-body"><AIPanel /></div>
       </aside>
+
+      {/* One scenario panel for the whole session, so scenarios keep coming (and pop up) on every page.
+          It is only visible while the simulation page has attached it to its slot. */}
+      {createPortal(<ScenarioPanel onNewScenario={setScenarioAlert} />, scenarioHost)}
+
+      <div className="rc-popups">
+        {scenarioAlert && pathname !== '/simulation' && <ScenarioPopup scenario={scenarioAlert} onClose={closeScenarioAlert} />}
+        <AttackPopup />
+      </div>
 
       {/* End state modal: displays Victory on Day 30 or Defeat on 0% health */}
       <EndStateModal />

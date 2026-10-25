@@ -1,33 +1,21 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useCombat, useResources } from '@/game'
 import { combatDamage } from '@/shared/combat'
 import { useAttempt } from '@/components/trading/util'
 import { Badge, Panel } from '@/FancyComp/parts'
-
-/** Send the automatic response this long before the window closes, so it reaches the server in time. */
-const AUTO_RESPOND_LEAD_MS = 1500
+import { chosenDefense } from './AttackPopup'
 
 /**
  * Attacks ordered on you. Pick how much ammo to defend with using the slider
  * and send it before the timer runs out. When time is nearly up, the slider's
- * current value is sent for you (all your ammo, if you have less than that).
+ * current value is sent for you (see AttackPopup, which does this on every page).
  */
 export function CombatPreview() {
   const { incoming, defend } = useCombat()
   const { ammo } = useResources()
   const [chosen, setChosen] = useState<Record<string, number>>({})
   const [message, attempt] = useAttempt()
-  const autoSent = useRef(new Set<string>())
   const owned = Math.floor(ammo)
-
-  useEffect(() => {
-    for (const a of incoming) {
-      if (a.msLeft > AUTO_RESPOND_LEAD_MS || autoSent.current.has(a.id)) continue
-      autoSent.current.add(a.id)
-      const amount = Math.min(chosen[a.id] ?? a.requiredDefense, owned)
-      void attempt(() => defend(a.id, amount), `Time ran out: responded to ${a.fromName} with ${amount} ammo`)
-    }
-  })
 
   return (
     <Panel title="ATTACKS ON YOU" right={incoming.length ? <Badge kind="crit">{incoming.length} INCOMING</Badge> : '0 INCOMING'}>
@@ -51,7 +39,10 @@ export function CombatPreview() {
                 step={1}
                 value={value}
                 style={{ flex: 1, minWidth: 140 }}
-                onChange={(e) => setChosen({ ...chosen, [a.id]: Number(e.target.value) })}
+                onChange={(e) => {
+                  chosenDefense[a.id] = Number(e.target.value)
+                  setChosen({ ...chosen, [a.id]: Number(e.target.value) })
+                }}
               />
               <span>{value} / {a.requiredDefense} AMMO</span>
               <button
