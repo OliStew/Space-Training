@@ -38,7 +38,7 @@ try {
         const combinedText = `Option ${option.key}: ${option.label} | Effects: ${effectsJson}\n`;
         allOptions += combinedText; 
       });
-      incomingEvent = `CURRENT TRADE OFFFER: ${scenario.name}\n${scenario.description}\nOPTIONS AND THEIR EFFECTS:\n${allOptions}`
+      incomingEvent = `CURRENT EVENT: ${scenario.name}\n${scenario.description}\nOPTIONS AND THEIR EFFECTS:\n${allOptions}`
       } else {incomingEvent = undefined}
 
     try {
