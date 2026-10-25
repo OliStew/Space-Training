@@ -6,7 +6,7 @@ import type { LowResourceGameReaction, TradeGameReaction, EventGameReaction } fr
 const tradeOffer= undefined;
 const incomingEvent= undefined;
 
-
+//
 export function AIPanel() {
   const resources = useResources()
 
@@ -20,6 +20,24 @@ export function AIPanel() {
 
     setIsProcessing(true)
 
+    const scenario = undefined; 
+
+    if(scenario){
+        const scenarioName = scenario.name;
+        const scenarioDescription = scenario.description;
+
+        console.log(scenarioName);        // e.g., "Goop Mutiny"
+        console.log(scenarioDescription); // e.g., "The latest batch of Space Goop..."
+
+        // 2. Pull the Option Labels and Effects for each choice
+        scenario.options.forEach((option) => {
+            const optionLabel = option.label;
+            const optionEffects = option.effects; // Returns the effects object (e.g., { food: -10, ... })
+
+            console.log(`- Label: ${optionLabel}`);
+            console.log(`  Effects:`, optionEffects);
+        });
+      }
     try {
       const aiResponse = await askResourceAI(inputText, resources, undefined, tradeOffer, incomingEvent)
       setReaction(aiResponse)
