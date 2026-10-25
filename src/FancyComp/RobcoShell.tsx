@@ -14,6 +14,7 @@ const ICON = {
   trading: 'M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4',
   simulate: 'M7 7h10v10H7zM10 10h4v4h-4zM9 3v4M15 3v4M9 17v4M15 17v4M3 9h4M3 15h4M17 9h4M17 15h4',
   settings: 'M12 8a4 4 0 100 8 4 4 0 000-8zM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2',
+  language: 'M4 5h9M8.5 3v2M6 5c0 4 3 7 7 8M12 5c0 4-3 7-7 8M14 21l4-10 4 10M15.5 18h5',
   bot: 'M12 4v3M7 8h10a3 3 0 013 3v6a3 3 0 01-3 3H7a3 3 0 01-3-3v-6a3 3 0 013-3zM9 13h.01M15 13h.01M9 17h6',
 }
 const Icon = ({ d }: { d: string }) => (
@@ -25,6 +26,7 @@ const NAV = [
   { to: '/trades', label: 'TRADING', icon: ICON.trading, title: 'MARKETS & PLAYER TRADING' },
   { to: '/simulation', label: 'SIMULATE', icon: ICON.simulate, title: 'SCENARIO SIMULATOR' },
   { to: '/settings', label: 'SETTINGS', icon: ICON.settings, title: 'TERMINAL SYSTEM SETTINGS' },
+  { to: '/language', label: 'LANGUAGE', icon: ICON.language, title: 'ALIEN LANGUAGE GAME' },
 ]
 
 type Pt = [number, number]
