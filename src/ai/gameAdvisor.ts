@@ -7,6 +7,25 @@ import type {
   LowResourceGameReaction, 
   LowResourceGameAction,
 } from '../interfaces/aiReactions'
+import { List } from 'lucide-react'
+
+const warningThreshold: Record<string, number> = {
+  'health': 50,
+  'oxygen': 40,
+  'food/spaceGoop': 20,
+  'ammo': 25,
+  'spaceBucks/money': 300
+};
+const criticalThreshold: Record<string, number> = {
+  'health': 30,
+  'oxygen': 10,
+  'food/spaceGoop': 20,
+  'ammo': 10,
+  'spaceBucks/money': 300
+};
+
+const warningKeys = Object.keys(warningThreshold);
+const criticalKeys = Object.keys(warningThreshold);
 
 const ALLOWED_ACTIONS: LowResourceGameAction[] = [
   'BUY_AMMO',
@@ -45,12 +64,21 @@ Do NOT use bolding (**), italics (*), or markdown bullet points in "text" or "re
 STRICT VIBE AND THRESHOLD RULES:
 1. "OPTIMAL": Set to "OPTIMAL" only when everything is exceptionally high (all resources are over 90 and money is over 2000).
 2. "STABLE": Set to "STABLE" when resources are safe and above danger lines, but not at peak optimal levels. 
-3. "WARNING": Set to "WARNING" when resources start dropping below 30.
-4. "CRITICAL": Set to "CRITICAL" during severe emergencies (Oxygen < 15).
-5. SAFE ZONE BUFFER: 
-   - If Oxygen is 15 or higher, do NOT trigger emergency oxygen actions. Treat it as safe.
-   - If Space Goop is 10 or higher, do NOT panic about food/goop.
-6. NO-ISSUE STATE: If all resources are safely above their danger lines, set the action to 'NONE'. Do not invent problems when everything is fine.
+3. "WARNING": Set to "WARNING" when resources start dropping below stated thresholds:
+    -${JSON.stringify(warningKeys[0])} < ${JSON.stringify(warningThreshold[warningKeys[0]])}
+    -${JSON.stringify(warningKeys[1])} < ${JSON.stringify(warningThreshold[warningKeys[0]])}
+    -${JSON.stringify(warningKeys[2])} < ${JSON.stringify(warningThreshold[warningKeys[0]])}
+    -${JSON.stringify(warningKeys[3])} < ${JSON.stringify(warningThreshold[warningKeys[0]])}
+    -${JSON.stringify(warningKeys[4])} < ${JSON.stringify(warningThreshold[warningKeys[0]])}
+4. "CRITICAL": Set to "CRITICAL" during the following severe emergencies when the following drop below threshold:
+    -${JSON.stringify(criticalKeys[0])} < ${JSON.stringify(criticalThreshold[criticalKeys[0]])}
+    -${JSON.stringify(criticalKeys[1])} < ${JSON.stringify(criticalThreshold[criticalKeys[0]])}
+    -${JSON.stringify(criticalKeys[2])} < ${JSON.stringify(criticalThreshold[criticalKeys[0]])}
+    -${JSON.stringify(criticalKeys[3])} < ${JSON.stringify(criticalThreshold[criticalKeys[0]])}
+    -${JSON.stringify(criticalKeys[4])} < ${JSON.stringify(criticalThreshold[criticalKeys[0]])}
+5. SAFE ZONE: 
+   - If resource is not "CRITICAL" or "WARNING", do NOT panic about that resource. 
+7. NO-ISSUE STATE: If all resources are safely above their danger lines, set the action to 'NONE'. Do not invent problems when everything is fine.
 STRICT ACTION ALLOWLIST:
 You can ONLY choose actions from this list: ${JSON.stringify(ALLOWED_ACTIONS)}
 `;
