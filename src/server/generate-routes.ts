@@ -57,6 +57,7 @@ export function registerGenerateRoutes(app: Hono<AppContext>): void {
     const userMessage = body.userMessage
     const resources = body.resources
     const gameTime = body.gameTime
+    const scenario = body.scenario
 
     if (typeof userMessage !== 'string' || !userMessage.trim()) {
       return c.json({ error: 'userMessage is required' }, 400)
@@ -69,7 +70,7 @@ export function registerGenerateRoutes(app: Hono<AppContext>): void {
     }
 
     try {
-      const advice = await getColonyAdvice(c.env, userMessage, resources)
+      const advice = await getColonyAdvice(c.env, userMessage, resources, scenario)
       return c.json(advice)
     } catch (error) {
       console.error('Colony advice error:', error)

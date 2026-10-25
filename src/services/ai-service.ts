@@ -5,29 +5,32 @@ import { buildColonyPrompt, parseColonyAdvice } from '../ai/gameAdvisor'
 export async function askResourceAI(
   envOrCommand: any,
   userCommandOrResources?: any,
-  resources?: any
+  resourcesOrScenario?: any,
+  scenarioObj?: any,
 ): Promise<LowResourceGameReaction> {
   const token = await getAuthToken()
   if (!token) {
     throw new Error('Not authenticated. Please log in.')
   }
 
- 
   let command = ''
   let resourcesObj: Record<string, any> = {}
+  let activeScenario: any = null
 
   if (typeof envOrCommand === 'string') {
-    
     command = envOrCommand
     resourcesObj = typeof userCommandOrResources === 'object' ? userCommandOrResources : {}
+    activeScenario = resourcesOrScenario ?? null
   } else {
-    
-    command = typeof userCommandOrResources === 'string' ? userCommandOrResources : String(userCommandOrResources || '')
-    resourcesObj = typeof resources === 'object' ? resources : {}
+    command =
+      typeof userCommandOrResources === 'string'
+        ? userCommandOrResources
+        : String(userCommandOrResources || '')
+    resourcesObj = typeof resourcesOrScenario === 'object' ? resourcesOrScenario : {}
+    activeScenario = scenarioObj ?? null
   }
 
-  
-  const payload = buildColonyPrompt(command, resourcesObj)
+  const payload = buildColonyPrompt(command, resourcesObj, activeScenario)
 
   
   const response = await fetch('/api/generate', {

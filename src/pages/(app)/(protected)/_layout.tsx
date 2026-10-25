@@ -18,13 +18,16 @@ import { Link, Outlet } from 'react-router-dom'
 import { AuthGate, AuthOverlay } from 'deepspace'
 import { Button } from '@/components/ui'
 import { GameProvider } from '@/game/GameProvider'
+import { ScenarioProvider } from '@/context/ScenarioContext'
 
 export default function ProtectedLayout() {
   return (
     <AuthGate fallback={<SignedOutPanel />}>
       {/* Per-player game state and market/trade polling for every gated page. */}
       <GameProvider>
-        <Outlet />
+        <ScenarioProvider>
+          <Outlet />
+        </ScenarioProvider>
       </GameProvider>
     </AuthGate>
   )
