@@ -1,0 +1,34 @@
+/* Y2K Terminal — base styles for the Y2K theme components.
+ * Import this file when you want the Y2K typography, link, and button
+ * defaults.  The color tokens live in themes.css under [data-theme="y2k"].
+ */
+
+[data-theme="y2k"] {
+    font-family: "IBM Plex Mono", "Courier New", monospace;
+}
+
+[data-theme="y2k"] a {
+    font-weight: 500;
+    color: var(--y2k-blue);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+[data-theme="y2k"] a:hover {
+    color: var(--y2k-green);
+}
+
+[data-theme="y2k"] h1 {
+    font-size: 3.2em;
+    line-height: 1.1;
+    color: var(--y2k-green);
+    text-shadow: 0 0 12px #39ff8a35;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-theme="y2k"] *,
+    [data-theme="y2k"] *::before,
+    [data-theme="y2k"] *::after {
+        transition-duration: 0.01ms !important;
+    }
+}
