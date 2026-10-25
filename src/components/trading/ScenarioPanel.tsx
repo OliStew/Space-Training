@@ -4,7 +4,7 @@ import { useDebugResources } from '@/game'
 import { useTextToSpeech } from '@/lib/tts'
 import { streamGenerate, streamTextSmoothly } from '@/lib/generate'
 import { fmt } from '@/components/trading/format'
-import { Badge, Meter } from '@/FancyComp/parts'
+import { Badge } from '@/FancyComp/parts'
 import data from '@/lib/scenarios.json'
 
 type Effects = { food: number; ammunition: number; oxygen: number; base_health_pct: number }
@@ -331,7 +331,6 @@ export function ScenarioPanel() {
   const rows = chosen
     ? (Object.keys(chosen.effects) as (keyof Effects)[]).filter((k) => chosen.effects[k] !== 0)
     : []
-  const health = chosen ? Math.max(0, 100 + chosen.effects.base_health_pct) : 100
 
   return (
     <>
@@ -448,7 +447,7 @@ export function ScenarioPanel() {
               {rows.length ? 'COSTS INCURRED' : 'NO COST'}
             </Badge>
           </div>
-          {rows.filter((k) => k !== 'base_health_pct').map((k) => {
+          {rows.map((k) => {
             const rk = RESOURCE_OF[k]
             const cur = state.resources[rk]
             return (
@@ -460,10 +459,6 @@ export function ScenarioPanel() {
               </div>
             )
           })}
-          <div className="rc-row" style={{ display: 'block' }}>
-            <span>COLONY HEALTH {chosen.effects.base_health_pct ? `(${chosen.effects.base_health_pct > 0 ? '+' : ''}${chosen.effects.base_health_pct}%)` : ''}</span>
-            <Meter value={health} max={100} />
-          </div>
         </>
       )}
 
