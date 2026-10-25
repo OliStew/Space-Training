@@ -101,6 +101,8 @@ export default function DashboardPage() {
 
       <hr />
     <AIPanel />
+        <hr />
+        <h2><Link to="/language">Alien Language Game</Link></h2>
     </div>
   )
 }
